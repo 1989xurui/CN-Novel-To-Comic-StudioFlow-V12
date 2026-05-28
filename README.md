@@ -3,17 +3,17 @@
 中国小说转漫画的 AI 生产流程。目标是把一章小说稳定改编成 **中国漫画**，减少 AI 味，提升角色连续性、导演分镜感和正式连载可用性。
 
 > 核心文件：[`To-Comic-StudioFlow.md`](./To-Comic-StudioFlow.md)  
-> 用户只需要上传：小说章节原文/链接 + `To-Comic-StudioFlow.md` + 基础角色图 + 上一期 `handoff.json`，即可继续生成下一章漫画。
+> 用户只需要上传：小说章节原文/链接 + `To-Comic-StudioFlow.md` + 基础角色图/角色基础包 + 上一期 `handoff.json`，即可继续生成下一章漫画。
 
 ---
 
 ## 产品效果预览
 
-下图是《永生》第254章《一个一个来》的 P01-P10 测试流程预览：
+下图是《永生》第254章《一个一个来》的 P01-P10 测试流程预览图：
 
-![Yongsheng Chapter 254 P01-P10 Preview](./docs/assets/yongsheng_254_preview.svg)
+![《永生》第254章《一个一个来》的 P01-P10 测试流程预览图](./docs/assets/yongsheng_254_preview.jpg)
 
-说明：该图用于公开展示工作流效果，完整测试图片保存在本地交付包中。正式项目建议继续按“单格无字图 → 页面合成 → 中文排版”的流程提高完成度。
+说明：该图用于公开展示工作流效果。正式项目建议继续按“单格无字图 → 页面合成 → 中文排版”的流程提高完成度。
 
 ---
 
@@ -26,7 +26,7 @@
 ```text
 小说章节原文/链接
 → 章节分析
-→ 角色锁定
+→ 角色锁定/冷启动角色基础包
 → 场景锁定
 → 导演页纲
 → 页面脚本
@@ -46,14 +46,13 @@
 
 ## 2. 首次使用操作流程
 
-第一次使用时，还没有上一期 `handoff.json`，按下面做：
+第一次使用时，如果没有基础角色图和上一期 `handoff.json`，按下面做：
 
-### Step 1：准备 3 个输入
+### Step 1：准备 2 个输入
 
 ```text
 1. 小说当前章节原文或小说章节链接
 2. To-Comic-StudioFlow.md
-3. 基础角色图
 ```
 
 ### Step 2：把下面这段发给 GPT / Agent
@@ -62,12 +61,10 @@
 请读取我上传的：
 1. 小说当前章节原文或小说地址
 2. To-Comic-StudioFlow.md
-3. 基础角色图
 
-这是第一期，没有上一期 handoff.json。
-请按 To-Comic-StudioFlow.md 工作，自动新建空白 handoff。
-
-直接输出本章完整结果包：
+这是首次冷启动，没有基础角色图，也没有 handoff.json。
+请先根据小说生成 character_bootstrap 角色基础包，然后直接输出本章完整结果包：
+- character_bootstrap/
 - chapter_card.json
 - director_beat_sheet.json
 - character_lock.json
@@ -75,10 +72,6 @@
 - page_script.json
 - comic_pages/P01-P10.png
 - handoff.json
-
-不要先停在 P01 测试页。
-不要让我逐页确认。
-直接生成可以看到的漫画页。
 ```
 
 ### Step 3：保存输出
@@ -86,12 +79,13 @@
 第一次完成后，必须保存：
 
 ```text
+character_bootstrap/
 comic_pages/P01-P10.png
 page_script.json
 handoff.json
 ```
 
-其中 `handoff.json` 是下一章继续生产的关键文件。
+其中 `character_bootstrap/` 和 `handoff.json` 是下一章继续生产的关键文件。
 
 ---
 
@@ -102,7 +96,7 @@ handoff.json
 ```text
 1. 下一章小说原文或小说地址
 2. To-Comic-StudioFlow.md
-3. 基础角色图
+3. 基础角色图或上一章 character_bootstrap
 4. 上一期 handoff.json
 ```
 
@@ -112,7 +106,7 @@ handoff.json
 请读取我上传的：
 1. 下一章小说原文或小说地址
 2. To-Comic-StudioFlow.md
-3. 基础角色图
+3. 基础角色图或上一章 character_bootstrap
 4. 上一期 handoff.json
 
 按 To-Comic-StudioFlow.md 工作。
@@ -161,7 +155,7 @@ README.md
 To-Comic-StudioFlow.md
 docs/
   assets/
-    yongsheng_254_preview.svg
+    yongsheng_254_preview.jpg
 prompts/
   style_prompt.md
   system_prompt.md
@@ -187,7 +181,8 @@ examples/
 每章默认直接输出完整结果包，不停在单页测试：
 
 ```text
-chapter_card.json
+character_bootstrap/（仅首次冷启动需要）
+→ chapter_card.json
 → director_beat_sheet.json
 → character_lock.json
 → scene_lock.json
@@ -217,7 +212,7 @@ chapter_card.json
 - 测试图说明
 - 生产注意事项
 
-公开首页展示的是压缩预览图：`docs/assets/yongsheng_254_preview.svg`。
+公开首页展示的是预览图：`docs/assets/yongsheng_254_preview.jpg`。
 
 ---
 
@@ -226,6 +221,7 @@ chapter_card.json
 ```yaml
 acceptance:
   complete_result:
+    character_bootstrap: required_if_cold_start
     chapter_card: required
     director_beat_sheet: required
     character_lock: required
@@ -267,7 +263,7 @@ acceptance:
 ## 10. 版本信息
 
 ```yaml
-version: 12.0
+version: 12.1
 main_file: To-Comic-StudioFlow.md
 status: production-template
 owner: 1989xurui
