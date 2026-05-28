@@ -1,23 +1,36 @@
 # CN-Novel-To-Comic-StudioFlow-V12
 
-中国小说转漫画的 AI 生产流程 SKIIS。目标是把一章小说稳定改编成 **中国漫画**，减少 AI 味，提升角色连续性、导演分镜感和正式连载可用性。
+中国小说转漫画的 AI 生产流程。目标是把一章小说稳定改编成 **中国漫画**，减少 AI 味，提升角色连续性、导演分镜感和正式连载可用性。
+
+> 核心文件：[`To-Comic-StudioFlow.md`](./To-Comic-StudioFlow.md)  
+> 用户只需要上传：小说章节原文/链接 + `To-Comic-StudioFlow.md` + 基础角色图 + 上一期 `handoff.json`，即可继续生成下一章漫画。
+
+---
+
+## 产品效果预览
+
+下图是《永生》第254章《一个一个来》的 P01-P10 测试流程预览：
+
+![Yongsheng Chapter 254 P01-P10 Preview](./docs/assets/yongsheng_254_preview.svg)
+
+说明：该图用于公开展示工作流效果，完整测试图片保存在本地交付包中。正式项目建议继续按“单格无字图 → 页面合成 → 中文排版”的流程提高完成度。
+
+---
 
 ## 1. 项目是什么
 
-`CN-Novel-To-Comic-StudioFlow-V12` 是一个面向 **小说转漫画** 的生产型 SKIIS，不是单纯的出图提示词。
+`CN-Novel-To-Comic-StudioFlow-V12` 是一个面向 **小说转漫画** 的生产型流程，不是单纯的出图提示词。
 
 它把传统“直接整页生成漫画”的方式改为更接近人类漫画团队的流程：
 
 ```text
-小说章节原文
+小说章节原文/链接
 → 章节分析
 → 角色锁定
 → 场景锁定
 → 导演页纲
 → 页面脚本
-→ 单格无字图
-→ 页面合成
-→ 中文后期排版
+→ 漫画页 P01-P10
 → handoff 交接文件
 ```
 
@@ -27,41 +40,109 @@
 - 人物前后稳定
 - 分镜像导演安排，不像图片拼贴
 - 场景连续但不过度 CG 化
-- 中文气泡后期排版，避免 AI 乱码
-- 每一期结束后生成 handoff，方便下一章继续
+- 每一期结束后生成 `handoff.json`，方便下一章继续
 
-## 2. 适用场景
+---
 
-适合：
+## 2. 首次使用操作流程
 
-- 中国玄幻 / 修真 / 武侠 / 都市异能 / 奇幻小说改漫画
-- 移动端竖向条漫
-- 连载型漫画项目
-- 需要长期保持角色、场景、画风连续的生产流程
-- 需要降低 AI 味、减少角色漂移、提升正式发布感的漫画项目
+第一次使用时，还没有上一期 `handoff.json`，按下面做：
 
-不适合：
+### Step 1：准备 3 个输入
 
-- 一次性生成一张海报
-- 一页塞完整章
-- 直接复刻未授权商业漫画
-- 纯 CG 概念图或电影分镜
+```text
+1. 小说当前章节原文或小说章节链接
+2. To-Comic-StudioFlow.md
+3. 基础角色图
+```
 
-## 3. 输出规格
+### Step 2：把下面这段发给 GPT / Agent
+
+```text
+请读取我上传的：
+1. 小说当前章节原文或小说地址
+2. To-Comic-StudioFlow.md
+3. 基础角色图
+
+这是第一期，没有上一期 handoff.json。
+请按 To-Comic-StudioFlow.md 工作，自动新建空白 handoff。
+
+直接输出本章完整结果包：
+- chapter_card.json
+- director_beat_sheet.json
+- character_lock.json
+- scene_lock.json
+- page_script.json
+- comic_pages/P01-P10.png
+- handoff.json
+
+不要先停在 P01 测试页。
+不要让我逐页确认。
+直接生成可以看到的漫画页。
+```
+
+### Step 3：保存输出
+
+第一次完成后，必须保存：
+
+```text
+comic_pages/P01-P10.png
+page_script.json
+handoff.json
+```
+
+其中 `handoff.json` 是下一章继续生产的关键文件。
+
+---
+
+## 3. 下一章继续操作流程
+
+从第二章开始，每次上传 4 个输入：
+
+```text
+1. 下一章小说原文或小说地址
+2. To-Comic-StudioFlow.md
+3. 基础角色图
+4. 上一期 handoff.json
+```
+
+然后对 GPT / Agent 说：
+
+```text
+请读取我上传的：
+1. 下一章小说原文或小说地址
+2. To-Comic-StudioFlow.md
+3. 基础角色图
+4. 上一期 handoff.json
+
+按 To-Comic-StudioFlow.md 工作。
+继承上一期 handoff.json 的角色、场景、道具和未解决钩子。
+直接输出下一章完整结果包：
+- chapter_card.json
+- director_beat_sheet.json
+- character_lock.json
+- scene_lock.json
+- page_script.json
+- comic_pages/P01-P10.png
+- handoff.json
+```
+
+---
+
+## 4. 输出规格
 
 ```yaml
 UNIT: 1个小说章节 = 1期漫画
 PAGE_COUNT:
-  default: 8
-  dense_chapter: 10
-  max: 10
-PAGE_TYPE: 中国移动端竖向条漫页面段
+  default: 10
+  short_chapter: 6-8
+PAGE_TYPE: 中国移动端竖向漫画页面段
 CANVAS:
   master_width: 1600px
   export_width: 1280px
   height: 按内容变化，不固定9:16
 STYLE:
-  国漫彩条漫
+  中国漫画
   偏日系人物线稿
   赛璐璐平涂
   清晰黑线
@@ -71,15 +152,16 @@ STYLE:
   少CG电影感
 ```
 
-## 4. 目录结构
+---
+
+## 5. 目录结构
 
 ```text
 README.md
-SKIIS_V12.md
+To-Comic-StudioFlow.md
 docs/
-  OPERATION_GUIDE.md
-  NEXT_STEPS.md
-  GITHUB_UPLOAD_GUIDE.md
+  assets/
+    yongsheng_254_preview.svg
 prompts/
   style_prompt.md
   system_prompt.md
@@ -96,44 +178,37 @@ examples/
     page_script.example.json
     handoff.example.json
     metadata/manifest.json
-    test_pages/
-      README.md
 ```
 
-## 5. 快速开始
+---
 
-每次新开 GPT / Agent 项目时，准备：
+## 6. 正式生产原则
+
+每章默认直接输出完整结果包，不停在单页测试：
 
 ```text
-1. 小说当前章节原文
-2. SKIIS_V12.md
-3. 基础角色图
-4. 上一期 handoff.json
+chapter_card.json
+→ director_beat_sheet.json
+→ character_lock.json
+→ scene_lock.json
+→ page_script.json
+→ comic_pages/P01-P10.png
+→ handoff.json
 ```
 
-第一期没有 handoff 时，可以使用：
+如需更高完成度，建议再做二次精修：
 
 ```text
-templates/handoff.template.json
-```
-
-启动提示词见：`prompts/system_prompt.md`。
-
-## 6. 正式生产流程
-
-每页按这个流程：
-
-```text
-页面脚本
-→ 单格无字图
+单格无字图
 → 页面合成
 → 中文气泡排版
-→ 检查角色和场景连续性
+→ 角色一致性复查
+→ 最终导出
 ```
 
-不要直接让 AI 一次生成完整最终页。
+---
 
-## 7. 示例
+## 7. 示例：永生 第254章
 
 `examples/yongsheng_254/` 包含《永生》第254章《一个一个来》的测试样例：
 
@@ -142,27 +217,36 @@ templates/handoff.template.json
 - 测试图说明
 - 生产注意事项
 
-测试图原始文件保存在本地交付包中。GitHub 仓库目前先保留脚本、模板和操作文档。
+公开首页展示的是压缩预览图：`docs/assets/yongsheng_254_preview.svg`。
+
+---
 
 ## 8. 验收标准
 
 ```yaml
 acceptance:
-  production:
-    single_panel_generation: required
-    page_compose: required
-    lettering_after_generation: required
+  complete_result:
+    chapter_card: required
+    director_beat_sheet: required
+    character_lock: required
+    scene_lock: required
+    page_script: required
+    comic_pages: required
+    handoff: required
+
   manga_feel:
     line_art_visible: required
     cel_shading_visible: required
     no_cg_background: required
     no_ai_poster: required
+
   character:
     main_character_consistent: required
     support_characters_distinct: required
     child_character_stable: required
     old_men_not_same_face: required
     group_characters_not_overdrawn: required
+
   director:
     one_page_one_question: required
     one_page_one_answer: required
@@ -172,15 +256,19 @@ acceptance:
     reaction_panel_present: required
 ```
 
+---
+
 ## 9. 版权说明
 
 本项目是漫画生产流程与工程模板。若用于改编真实小说、商业小说或平台连载内容，正式发布前需要确认版权授权。
+
+---
 
 ## 10. 版本信息
 
 ```yaml
 version: 12.0
-name: CN_Novel_To_Comic_StudioFlow_V12
+main_file: To-Comic-StudioFlow.md
 status: production-template
 owner: 1989xurui
 ```
