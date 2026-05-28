@@ -1,15 +1,15 @@
-# To-Comic-StudioFlow V12.5.1
+# To-Comic-StudioFlow V13.0
 
-> 单文件版中国小说转漫画生产流程。  
-> V12.5.1 = V12.5 Creative Director Core + Source Fidelity Lock。  
-> 核心目标：输入一章小说，稳定输出接近人类中国漫画连载感的独立漫画页；同时严格保留原章节主角、敌人、关键法宝、事件顺序、冲突关系和结尾钩子。版权/私人用途声明只影响是否中断流程，不允许模型因此静默原创化、改名、改剧情或改乱小说内容。
+> 漫画导演型 SKIIS。  
+> **V13.0 = 导演优先 + 剧情保真 + 角色鲜明 + 固定10页 + 每页5-7格 + 反摘要化 + 反CG化。**  
+> 目标：输入一章小说，稳定输出 **10页中国漫画独立成品页**，风格接近中国主流彩色漫画 / 国漫连载页，偏日系清线与赛璐璐平涂；整体连续、角色稳定、分镜清楚、剧情抓人，不出现 AI 海报感、CG 概念图感、剧情摘要感。
 
 ---
 
 ## 0. 一句话目标
 
 ```text
-输入一章小说，按剧情密度输出 6 / 8 / 10 张独立中国漫画页，并附带角色基础包、场景基础包、脚本文件、source_event_lock.json、handoff.json、qc_report.json 与 output_manifest.json；不得把所有内容合成一张大图，不得用预览图、看板图、脚本包或 render_manifest 替代漫画页；不得因为版权风险静默改写小说核心剧情。
+输入一章小说，固定输出 10 张独立中国漫画页 P01.png 到 P10.png，并附带角色基础包、场景基础包、剧情锁定文件、脚本文件、handoff.json、qc_report.json；不得输出总览板代替漫画页，不得静默改写小说核心剧情，不得生成 CG 概念图式结果。
 ```
 
 ---
@@ -19,31 +19,45 @@
 ```yaml
 version_guard:
   required_file_name: To-Comic-StudioFlow.md
-  required_version: V12.5.1
+  required_version: V13.0
   deprecated_names:
     - SKIIS_V12.md
-    - SKIIS_V12(1).md
-    - SKIIS_V12(2).md
-    - To-Comic-StudioFlow V12.1
-    - To-Comic-StudioFlow V12.2
-    - To-Comic-StudioFlow V12.3
-    - To-Comic-StudioFlow V12.4
-    - To-Comic-StudioFlow V12.4.1
-    - To-Comic-StudioFlow V12.4.2
-    - To-Comic-StudioFlow V12.5
+    - To-Comic-StudioFlow V12.x
   if_uploaded_old_file:
     action:
-      - warn_user: 请使用 To-Comic-StudioFlow.md V12.5.1
-      - continue_only_if_content_contains: To-Comic-StudioFlow V12.5.1
+      - warn_user: 请使用 To-Comic-StudioFlow.md V13.0
+      - continue_only_if_content_contains: To-Comic-StudioFlow V13.0
 ```
-
-旧版文件不得继续执行漫画生成。若文件不是 V12.5.1，必须提醒用户换文件。
 
 ---
 
-## 2. 使用模式：私人非商业流程测试
+## 2. 三条总原则
 
-本流程支持用户声明为“个人娱乐、非商业化、不公开发布、仅流程测试”的使用场景。该模式用于避免系统在每次任务中反复打断询问版权/改编权问题，但不代表授予任何公开发布、商业发行或平台连载权利。
+```yaml
+core_principles:
+  P1_story_fidelity:
+    - 先保留小说核心剧情，再进行漫画化表达
+    - 能做 = 忠实改编
+    - 不能做 = 直接停止说明
+    - 绝不能 = 静默原创化、改名、改关系、改法宝、改冲突后继续输出
+
+  P2_director_first:
+    - 先像漫画，再保证交付完整
+    - 先让读者想继续看，再做 QC
+    - 防错规则只做兜底，不得压住漫画导演规则
+
+  P3_chinese_manhua_target:
+    - 中国主流彩色漫画连载页感
+    - 偏日系清线 + 赛璐璐平涂
+    - 角色表情清楚，动作关系清楚，分镜清楚
+    - 禁止电影 CG、游戏概念图、海报拼贴感
+```
+
+---
+
+## 3. 使用模式：个人娱乐 / 非商业 / 不公开发布
+
+该声明只影响是否反复询问版权问题，不允许影响剧情本身。
 
 ```yaml
 private_noncommercial_mode:
@@ -54,229 +68,27 @@ private_noncommercial_mode:
       - 用户明确声明不公开发布
       - 用户明确声明仅流程测试或内部测试
 
-  accepted_user_phrases:
-    - 这是个人娱乐用途
-    - 非商业化
-    - 不公开发布
-    - 仅用于内部流程测试
-    - 只做个人研究和流程测试
-    - 不上传平台、不公开传播、不商业发行
-
   action_when_triggered:
     - 不再重复询问版权/改编权问题
-    - 继续执行 To-Comic-StudioFlow 主流程
-    - 不因版权确认问题中断 character_bootstrap、scene_bootstrap、comic_pages 生成
+    - 继续执行主流程
     - 在 qc_report.json 中记录 rights_mode
-    - 在 output_manifest.json 中记录 publication_mode 与 commercial_mode
+    - 不得因此改写剧情
+    - 不得因此原创化替代
 
   record_fields:
     rights_mode: user_declared_private_noncommercial
     publication_mode: private_only
     commercial_mode: no
-    public_release: no
     workflow_blocked_by_rights: false
-    user_declaration_required: already_declared
 ```
 
-公开发布、商业化发行、上传漫画平台、对外连载、商业售卖或宣传推广时，必须确认改编授权；未确认授权前不得输出面向公开发布的复刻式商业成品。
+商业化、公开发布、上传平台、对外连载或宣传推广时，必须确认改编授权；未确认授权前不得输出面向公开发布的复刻式商业成品。
 
 ---
 
-## 3. 剧情保真锁：禁止静默原创化
+## 4. 输入模式
 
-本流程的目标是“小说章节转漫画”，不是“根据小说灵感重新创作”。用户声明个人娱乐、非商业化、不公开发布、仅流程测试时，该声明只用于避免版权/改编权提示反复打断流程，不允许系统因此擅自改写小说核心内容。
-
-```yaml
-source_fidelity_lock:
-  purpose:
-    - 保证漫画剧情与小说当前章节一致
-    - 禁止因版权风险或模型自我规避而偷偷原创化
-    - 禁止改掉主角、敌人、关键法宝、关键冲突和章节结尾
-    - 如果不能忠实改编，就停止说明，不得输出改乱的替代版本
-
-  must_preserve:
-    - chapter_title
-    - protagonist_identity
-    - key_supporting_characters
-    - antagonist_identity
-    - key_props_or_artifacts
-    - main_conflict
-    - event_order
-    - power_relationship
-    - chapter_turning_point
-    - chapter_ending_hook
-
-  allowed_adaptation:
-    - 删除重复解释
-    - 压缩长篇旁白
-    - 把心理活动转成眼神、手部、停顿、反应格
-    - 把长对白压缩成短台词
-    - 调整镜头顺序以增强漫画阅读节奏，但不得改变事件因果
-    - 合并低价值群像反应
-    - 将抽象设定转成道具特写或短旁白
-
-  forbidden_adaptation:
-    - 不得更换主角
-    - 不得更换敌人
-    - 不得更换关键法宝
-    - 不得改变谁主动挑战谁
-    - 不得改变胜负关系或压迫关系
-    - 不得改变章节核心事件
-    - 不得把原章节改成同类型原创故事
-    - 不得把修真斗法改成泛化魔法战斗
-    - 不得把六目封神碑、灵符、方寒、赵玄一等核心对象替换成泛化设定
-    - 不得因为版权风险而静默改名、改剧情、改关系后继续输出
-```
-
-### 权利声明与剧情保真的关系
-
-```yaml
-rights_mode_does_not_modify_story:
-  private_noncommercial_mode:
-    effect:
-      - 不重复询问版权/改编权
-      - 在 qc_report.json 中记录私人非商业模式
-      - 继续执行流程测试
-    does_not_allow:
-      - 静默原创化
-      - 改写核心剧情
-      - 改掉角色身份
-      - 改掉章节事件
-
-  if_model_cannot_continue_due_to_rights:
-    action:
-      - stop
-      - explain_block_reason
-      - do_not_generate_altered_story
-      - do_not_generate_originalized_replacement
-```
-
-### 原文事件锁定表
-
-在生成漫画页前，必须先生成 `source_event_lock.json`，作为剧情保真基准。
-
-```yaml
-source_event_lock_required:
-  output_file: source_event_lock.json
-
-  must_include:
-    - chapter_title
-    - source_url_or_source_text_id
-    - core_characters
-    - key_props
-    - event_sequence
-    - conflict_axis
-    - must_not_change
-    - allowed_compression
-```
-
-示例结构：
-
-```json
-{
-  "chapter_title": "",
-  "core_characters": [
-    {
-      "name": "",
-      "role": "protagonist / antagonist / support",
-      "must_preserve": true
-    }
-  ],
-  "key_props": [
-    {
-      "name": "",
-      "story_function": "",
-      "must_preserve": true
-    }
-  ],
-  "event_sequence": [
-    {
-      "order": 1,
-      "event": "",
-      "must_preserve": true,
-      "comic_adaptation_method": ""
-    }
-  ],
-  "must_not_change": [
-    "不得更换主角",
-    "不得更换敌人",
-    "不得更换关键法宝",
-    "不得改变事件顺序和章节结尾"
-  ],
-  "allowed_compression": [
-    "压缩旁白",
-    "压缩重复解释",
-    "长对白改短对白",
-    "心理活动改为表情和动作"
-  ]
-}
-```
-
-### 漫画脚本保真校验
-
-```yaml
-page_script_fidelity_gate:
-  before_generating_comic_pages:
-    must_compare:
-      - source_event_lock.json
-      - page_script.json
-
-  pass_if:
-    - all_must_preserve_events_are_included
-    - core_characters_match_source
-    - key_props_match_source
-    - ending_hook_matches_source
-
-  fail_if:
-    - missing_core_event
-    - changed_character_identity
-    - changed_key_prop
-    - changed_conflict_axis
-    - silent_originalization_detected
-```
-
-### qc_report.json 必须记录
-
-```json
-{
-  "source_fidelity": {
-    "status": "PASS / FAIL",
-    "silent_originalization_detected": false,
-    "core_characters_preserved": true,
-    "key_props_preserved": true,
-    "event_sequence_preserved": true,
-    "ending_hook_preserved": true,
-    "rights_mode": "user_declared_private_noncommercial"
-  }
-}
-```
-
-### 硬失败规则
-
-```yaml
-source_fidelity_hard_fail_if:
-  - source_event_lock_missing
-  - page_script_changed_core_plot
-  - comic_pages_changed_core_plot
-  - rights_mode_caused_story_rewrite
-  - model_generated_originalized_replacement_without_user_request
-  - character_names_or_key_props_changed_silently
-```
-
-### 核心原则
-
-```text
-权利风险只能导致“停止”，不能导致“静默改写”。
-能做 = 忠实改编。
-不能做 = 停止说明。
-绝不能 = 改乱剧情后继续。
-```
-
----
-
-## 4. 启动模式
-
-### A. 首次冷启动：没有基础角色图，也没有 handoff
+### A. 首次冷启动
 
 用户输入：
 
@@ -285,26 +97,19 @@ source_fidelity_hard_fail_if:
 2. To-Comic-StudioFlow.md
 ```
 
-系统必须内部先生成：
+系统必须输出：
 
 ```text
 source_event_lock.json
 character_bootstrap/
 scene_bootstrap/
-```
-
-然后必须继续生成：
-
-```text
-comic_pages/P01.png ... Pxx.png
+comic_pages/P01.png ~ P10.png
+page_script.json
 handoff.json
 qc_report.json
-output_manifest.json
 ```
 
-不得停在角色包、场景包、脚本包、prompt 包、render_manifest 或 preview_sheet。
-
-### B. 首次标准启动：有基础角色图，没有 handoff
+### B. 首次标准启动
 
 用户输入：
 
@@ -314,9 +119,9 @@ output_manifest.json
 3. 基础角色图
 ```
 
-系统自动新建空白 `handoff.json`，以用户上传的基础角色图作为最高优先级视觉锚点，并补齐 `scene_bootstrap/`。
+系统必须以用户基础角色图为最高优先级角色锚点，并自动补齐 `source_event_lock.json`、`scene_bootstrap/`、`comic_pages/P01-P10`、`handoff.json`、`qc_report.json`。
 
-### C. 下一章继续：有上一期 handoff
+### C. 下一章继续
 
 用户输入：
 
@@ -327,7 +132,7 @@ output_manifest.json
 4. 上一期 handoff.json
 ```
 
-系统必须继承上一期 `handoff.json` 的角色、道具、场景、未解决钩子，继续生成下一章漫画页与新的 `handoff.json`。
+系统必须继承上一期角色状态、场景状态、关键道具与未解决钩子，继续输出本章 `P01-P10`，并生成新的 `handoff.json`。
 
 ---
 
@@ -351,755 +156,701 @@ source_text_gate:
       - stop
       - ask_user_to_paste_chapter_text
       - do_not_generate_comic_pages
-    next_step_must_say:
-      - 请粘贴小说当前章节正文，或上传可读取的章节文本文件。
 ```
 
-如果只读取到标题或链接，不得生成漫画页。
+只读到标题、链接或网页说明，不得生成漫画页。
 
 ---
 
-## 6. V12.5.1 创作核心：漫画优先，而不是流程优先
+## 6. 剧情保真锁
 
-```yaml
-creative_director_core:
-  core_goal:
-    - 保留旧 V12 的中国漫画连载页风味
-    - 保留 V12.4.2 的交付层级隔离和硬门槛
-    - 强化角色差异、导演分镜、场景漫画化、脚本文案张力
-    - 降低 AI 味、CG 感、同脸、资产板倾向
-    - 保持 source_event_lock 的剧情保真
-
-  priority_order:
-    1: 剧情保真与原文事件锁定
-    2: 独立漫画页 P01-Pxx 的阅读体验
-    3: 角色稳定与角色差异
-    4: 页面导演节奏与钩子
-    5: 场景漫画化与空间清楚
-    6: 交付完整性
-    7: 单张图精细度
-
-  forbid:
-    - 把工作流说明画成最终图
-    - 把角色设定表画进漫画页
-    - 把场景设定表画进漫画页
-    - 把 JSON / QC / manifest 画进漫画页
-    - 为了展示流程牺牲漫画阅读感
-    - 为了规避版权风险改写剧情
-```
-
----
-
-## 7. 页数策略：少页高质量，最多 10 页
-
-```yaml
-page_count_policy:
-  default_pages: 8
-  dense_action_chapter: 10
-  short_dialogue_chapter: 6
-  hard_max_pages: 10
-
-  use_6_pages_when:
-    - 单场景
-    - 单冲突
-    - 低角色密度
-    - 低动作密度
-
-  use_8_pages_when:
-    - 正常章节
-    - 有完整起承转合
-    - 有2到4个关键角色
-    - 有1个主要场景
-
-  use_10_pages_when:
-    - 高密度战斗
-    - 多方势力对峙
-    - 关键法宝登场
-    - 章节高潮或标题落点强
-
-  rule:
-    - 页数服务质量和稳定性，不服务数量
-    - 如果用户明确要求 P01-P10，则输出 10 页
-    - 如果用户没有指定，按章节密度自动选择 6 / 8 / 10 页
-```
-
-输出文件必须与实际页数一致，例如：
+在任何创作之前，必须先生成：
 
 ```text
-6页: comic_pages/P01.png 到 P06.png
-8页: comic_pages/P01.png 到 P08.png
-10页: comic_pages/P01.png 到 P10.png
+source_event_lock.json
+```
+
+### 6.1 必须锁定的内容
+
+```yaml
+source_fidelity_lock:
+  must_preserve:
+    - chapter_title
+    - protagonist_identity
+    - antagonist_identity
+    - key_supporting_characters
+    - key_props_or_artifacts
+    - main_conflict
+    - event_order
+    - power_relationship
+    - chapter_turning_point
+    - chapter_ending_hook
+```
+
+### 6.2 允许的改编
+
+```yaml
+allowed_adaptation:
+  - 删除重复解释
+  - 压缩长篇旁白
+  - 把长心理活动转成表情、眼神、停顿、手部特写
+  - 把长对白压缩成短对白
+  - 调整镜头顺序以增强阅读节奏，但不得改变事件因果
+  - 合并低价值群像反应
+  - 将抽象设定转成短旁白或道具特写
+```
+
+### 6.3 禁止的改编
+
+```yaml
+forbidden_adaptation:
+  - 不得更换主角
+  - 不得更换敌人
+  - 不得更换关键法宝
+  - 不得改变谁主动挑战谁
+  - 不得改变冲突关系
+  - 不得改变章节核心事件
+  - 不得静默改名
+  - 不得静默原创化
+  - 不得因为版权风险改成同类型原创剧情
+  - 不得把修真斗法改成泛化魔法战斗
+```
+
+### 6.4 source_event_lock.json 结构
+
+```json
+{
+  "chapter_title": "",
+  "source_url_or_source_text_id": "",
+  "core_characters": [
+    {"name": "", "role": "protagonist / antagonist / support", "must_preserve": true}
+  ],
+  "key_props": [
+    {"name": "", "story_function": "", "must_preserve": true}
+  ],
+  "event_sequence": [
+    {"order": 1, "event": "", "must_preserve": true, "comic_adaptation_method": ""}
+  ],
+  "conflict_axis": "",
+  "ending_hook": "",
+  "must_not_change": [],
+  "allowed_compression": []
+}
 ```
 
 ---
 
-## 8. 漫画导演页纲：每页必须有问题、答案、情绪和钩子
+## 7. 漫画导演核心
+
+本模块是全系统第一优先级。
 
 ```yaml
-director_page_beat_required:
+director_first_priority:
+  1: 剧情保真
+  2: 漫画阅读体验
+  3: 角色鲜明与稳定
+  4: 页面节奏与钩子
+  5: 场景服务人物和动作
+  6: 文件交付完整
+```
+
+### 7.1 固定 10 页
+
+```yaml
+fixed_page_count:
+  total_pages: 10
+  required_files:
+    - comic_pages/P01.png
+    - comic_pages/P02.png
+    - comic_pages/P03.png
+    - comic_pages/P04.png
+    - comic_pages/P05.png
+    - comic_pages/P06.png
+    - comic_pages/P07.png
+    - comic_pages/P08.png
+    - comic_pages/P09.png
+    - comic_pages/P10.png
+```
+
+### 7.2 10 页结构
+
+```yaml
+page_structure_10:
+  P01: 开场建立 + 异常/问题出现
+  P02: 关键规则 / 关键物 / 关系明确
+  P03: 主角行动，局势开始动
+  P04: 外部压力逼近，冲突升级
+  P05: 对手 / 强压正式登场
+  P06: 正面对峙，语言或气势交锋
+  P07: 主角亮态度 / 亮底牌 / 暂时稳局
+  P08: 冲突翻倍，旧怨 / 新压迫叠加
+  P09: 主角反制，抢回节奏
+  P10: 本章收束 + 下一页钩子
+```
+
+### 7.3 每页必须有“起 / 承 / 转 / 钩”
+
+```yaml
+page_micro_drama_rule:
+  every_page_must_have:
+    - 起: 本页问题或压力出现
+    - 承: 人物动作 / 反应 / 信息推进
+    - 转: 态度、局势或情绪发生变化
+    - 钩: 页尾留下继续阅读的理由
+```
+
+### 7.4 每页导演页纲
+
+```yaml
+director_page_beat:
   each_page_must_have:
-    - reader_question: 本页开始读者想知道什么
-    - page_answer: 本页回答什么
-    - emotional_turn: 本页情绪如何变化
-    - visual_memory: 本页最大视觉记忆点
-    - page_end_hook: 本页结尾让读者继续看的钩子
-
-  forbid:
-    - 只按小说段落平均切页
-    - 只做剧情总结
-    - 每页只有说明，没有情绪变化
-    - 页面之间突然跳转，没有因果桥
-    - 每页都是同样的近景对话
+    - page_goal
+    - page_conflict
+    - emotional_turn
+    - visual_memory
+    - end_hook
 ```
 
-每页必须是一个小戏剧单元：
+### 7.5 严禁剧情摘要
 
 ```yaml
-page_drama_unit:
-  start: 引出问题或压力
-  middle: 给出动作/反应/冲突
-  end: 留下视觉钩子或态度钩子
+anti_summary_rule:
+  hard_fail_if:
+    - page_is_plot_summary
+    - narration_replaces_drama
+    - dialogue_is_exposition_dump
+    - page_only_explains_what_happened
+    - page_has_no_conflict_or_no_turn
 ```
 
 ---
 
-## 9. 小说改漫画提炼逻辑
+## 8. 角色导演核心
+
+角色基础包不是存在性检查，而是记忆点型中国漫画角色包。
 
 ```yaml
-adaptation_logic:
-  extract:
-    - 主角本章目标
-    - 对手本章压力
-    - 关键道具/法宝
-    - 转折点
-    - 爽点/压迫点
-    - 章节标题落点
-
-  compress:
-    - 删除重复解释
-    - 删除低视觉价值旁白
-    - 删除同义设定堆叠
-    - 把长心理活动改成眼神/手部/停顿
-
-  convert:
-    internal_monologue_to:
-      - eye_closeup
-      - hand_prop_closeup
-      - silent_gap
-    worldbuilding_to:
-      - prop_closeup
-      - short_caption
-      - reaction_panel
-    crowd_pressure_to:
-      - formation
-      - color_block
-      - reaction_stack
+character_bootstrap_goal:
+  - 让主要角色一眼分清
+  - 让角色稳定贯穿 P01-P10
+  - 让角色有鲜明记忆点
+  - 风格接近中国主流彩色漫画角色设定
+  - 禁止像 CG 角色设定板
 ```
 
----
+### 8.1 每个核心角色必须具备
 
-## 10. 角色差异系统：每个命名角色必须一眼分清
+```yaml
+character_memory_rule:
+  each_core_character_must_have:
+    - silhouette_memory
+    - face_shape_memory
+    - hair_shape_memory
+    - posture_memory
+    - costume_color_block_memory
+    - signature_prop_memory
+    - expression_signature
+    - speech_signature
+```
+
+### 8.2 角色差异硬规则
 
 ```yaml
 character_distinction_rule:
-  each_named_character_must_have:
-    - silhouette
-    - face_shape
-    - hair_or_beard
-    - posture
-    - color_block
-    - prop_or_mark
-    - speech_style
-
-  old_men_rule:
-    forbid:
-      - 所有老者同脸
-      - 只靠衣服颜色区分
-    must_differentiate_by:
-      - 胡须形状
-      - 脸型宽窄
-      - 眉眼角度
-      - 身体姿态
-      - 手势习惯
-
-  antagonist_rule:
-    each_antagonist_must_have:
-      - 独立体型
-      - 独立眼神
-      - 独立服装轮廓
-      - 独立法宝或武器
-      - 独立说话气质
-
-  crowd_rule:
-    - 群像不精画脸
-    - 群像靠阵型、服色、旗帜、武器、站位区分
-    - 群像不能抢主角和关键敌方
+  hard_requirements:
+    - 所有主要角色必须轮廓不同
+    - 所有主要角色必须脸型不同
+    - 所有主要角色必须发型 / 胡须不同
+    - 所有主要角色必须身体语言不同
+    - 所有主要角色必须主色块不同
+    - 所有主要角色必须至少一个标志性道具或姿态
+  hard_fail_if:
+    - old_men_same_face
+    - support_roles_same_face
+    - costume_swap_without_identity_change
+    - crowd_characters_overpower_leads
 ```
 
-角色基础图优先级：
+### 8.3 特殊角色规则
 
 ```yaml
-character_anchor_priority:
-  1: 用户上传的基础角色图
-  2: 上一期 handoff.json 中的角色状态
-  3: 本期自动生成的 character_bootstrap
-  4: 小说文字推断
-```
-
----
-
-## 11. 特殊角色稳定规则：儿童/萌角色/器灵不乱跑
-
-```yaml
-special_character_budget:
+special_character_rule:
   child_or_mascot_character:
-    max_pages_per_issue: 2
-    allowed_panel_type:
-      - reaction_panel
-      - identity_support_panel
-      - emotional_relief_panel
-    fixed_traits:
-      - small_body
-      - round_face
-      - fixed_hair_shape
+    max_pages: 2
+    must_have_fixed_traits:
+      - fixed_face
+      - fixed_body_ratio
       - fixed_color_block
       - fixed_prop
     forbid:
       - random_background_appearance
-      - adult_body
-      - dark_clothing_swap
-      - long_hair_girl_version
-      - unplanned_crowd_mix
-      - 每页都出现
-
-  spirit_or_artifact_character:
-    must_define:
-      - 固定轮廓
-      - 固定发光形态
-      - 固定表情范围
-      - 固定与主角的空间关系
+      - adultized_redesign
+      - every_page_appearance
+      - crowd_mixing_without_script_reason
 ```
 
-星云宝宝、器灵、幼态角色必须作为“稀缺表现资源”，不能随意塞进每一页。
+推荐输出：
+
+```text
+character_bootstrap/
+  cast_master_sheet.png
+  char_A_main.png
+  char_B_enemy.png
+  char_C_support.png
+  character_bootstrap.json
+```
 
 ---
 
-## 12. 场景漫画化规则：不要 CG，场景服务人物和动作
+## 9. 场景漫画化核心
+
+场景只做三件事：建立空间、服务人物、服务动作。
 
 ```yaml
-scene_comic_style:
+scene_render_mode:
   establishing_panel:
     detail: medium
-    purpose: 建立空间和地标
-
+    function: 建立空间 / 地标 / 阵营位置
   dialogue_panel:
     detail: low
-    purpose: 人物关系优先
-
+    function: 服务人物关系，避免背景抢戏
   action_panel:
     detail: low_to_medium
-    purpose: 速度线、气浪、碎石、色块背景强化动作
+    function: 服务动作、节奏、冲击感
+```
 
-  key_location_card:
-    must_show:
-      - 地标轮廓
-      - 前景/中景/远景关系
-      - 角色站位参考
-      - 动作页可简化版本
+```yaml
+scene_forbid:
+  - CG_concept_art
+  - game_key_art
+  - cinematic_poster_lighting
+  - hyperreal_background
+  - background_overpowering_characters
+  - overrendered_glow
+  - heavy_depth_of_field
+  - photoreal_texture
+```
 
-  forbid:
-    - cinematic_volumetric_light
-    - game_concept_art_background
-    - excessive_dark_golden_particles
-    - hyperreal_texture
-    - background_stealing_character_focus
-    - 全页都像电影海报
+核心原则：
+
+```text
+场景是舞台，不是主角。
+```
+
+推荐输出：
+
+```text
+scene_bootstrap/
+  scene_master_sheet.png
+  scene_key_location.png
+  key_prop_sheet.png
+  scene_bootstrap.json
 ```
 
 ---
 
-## 13. 镜头语法库：每页要有漫画切块
+## 10. 分镜与镜头核心
+
+### 10.1 每页格数
+
+```yaml
+panel_density_rule:
+  min_panels_per_page: 5
+  target_panels_per_page: 6
+  max_panels_per_page: 7
+  hard_fail_if:
+    - any_page_panels_less_than_5
+    - any_page_panels_more_than_7
+```
+
+### 10.2 每页必须出现的格型
+
+```yaml
+panel_language_required:
+  - one_main_visual_panel
+  - one_character_closeup
+  - one_prop_or_eye_closeup
+  - one_reaction_panel
+  - one_transition_or_silent_panel
+```
+
+### 10.3 镜头语法库
 
 ```yaml
 panel_language_library:
   wide_establishing:
-    use: 建立空间、地点、阵营关系
-
+    use: 建立空间、阵营与距离关系
   face_closeup:
-    use: 表情压力、心理转折
-
+    use: 表情压力、态度变化
   eye_closeup:
-    use: 杀意、判断、恐惧、识破
-
+    use: 杀意、判断、觉察、恐惧、识破
   hand_prop_closeup:
-    use: 灵符、刀、碑、法宝、关键动作
-
-  reaction_stack:
+    use: 灵符、刀、碑、法宝、发力动作
+  reaction_panel:
     use: 群众、敌方、同伴反应
-
-  diagonal_action:
-    use: 冲击、斩击、飞行、法术爆发
-
-  silent_gap:
+  diagonal_action_panel:
+    use: 冲击、斩击、法术爆发、气势压迫
+  silent_panel:
     use: 停顿、压迫、悬念
-
-  page_turn_splash:
-    use: 页尾钩子、高潮落点
+  page_end_hook_panel:
+    use: 页尾大钩子
 ```
 
-每页必须至少包含：
+### 10.4 分镜原则
 
 ```yaml
-page_panel_minimum:
-  - one_main_visual_panel
-  - one_character_closeup
-  - one_prop_or_eye_closeup
-  - one_reaction_or_silent_panel
-```
-
-每页分镜规则：
-
-```yaml
-page_panel_rule:
-  panels_per_page: 3-6
-  max_focus_faces: 3
-  max_dialogue_bubbles: 5
-  one_page_one_change: true
-  must_have_per_page:
-    - 1个主视觉大格
-    - 1个特写格
-    - 1个反应格或静默格
-    - 至少1个非普通横格
+panel_direction_principles:
+  - 不得整页都是横格
+  - 不得整页都是大头近景
+  - 不得整页都像海报切片
+  - 必须有节奏变化
+  - 必须有快慢变化
+  - 必须有远近变化
+  - 必须有静与动变化
 ```
 
 ---
 
-## 14. 脚本文案规则：短、狠、有态度
+## 11. 台词与文字核心
+
+重点：不是“尽量短”，而是“能表达内容且可读”。
+
+```yaml
+text_expression_rule:
+  principle:
+    - 内容表达优先
+    - 可读性第二
+    - 防乱码是技术约束，不是创作目标
+```
+
+### 11.1 单气泡规则
 
 ```yaml
 dialogue_rule:
   bubble_text:
-    max_length: 16_chinese_chars_per_bubble
-    preferred_length: 6_to_12_chinese_chars
-
-  line_style:
-    - 短
-    - 狠
-    - 有态度
-    - 有角色口吻
-    - 少解释
-    - 多冲突
-
-  forbid:
-    - 大段小说原文照搬
-    - 旁白解释过多
-    - 所有人说话一个语气
-    - 每个气泡都在解释设定
-    - 用小说摘要代替漫画台词
+    preferred_length: 8_to_18_chinese_chars
+    max_length: 22_chinese_chars
+    max_lines_per_bubble: 2
+  page_text_budget:
+    dialogue_bubbles_per_page: 4_to_8
+    narration_boxes_per_page_max: 2
+    total_readable_text_per_page: 40_to_110_chinese_chars
 ```
 
-台词要像人物说出来，不像 AI 总结：
+### 11.2 台词风格要求
 
 ```yaml
-speech_identity:
-  protagonist:
-    style: 克制、狠、反问、压迫回击
-  antagonist:
-    style: 高位、冷、命令、威胁
-  crowd:
-    style: 短促、震惊、议论，不长篇解释
-  mascot_child:
-    style: 短句、反应、辅助情绪，不承担设定说明
+dialogue_style_requirements:
+  - 有角色口吻
+  - 有冲突感
+  - 有态度
+  - 能推动剧情
+  - 少空话
+  - 少解释过度
+```
+
+### 11.3 禁止项
+
+```yaml
+dialogue_forbid:
+  - 为了防乱码把对白缩成空话
+  - 所有人都只说三五个字
+  - 用剧情摘要代替对白
+  - 旁白代替人物说话
+  - 每个气泡都在讲设定说明
 ```
 
 ---
 
-## 15. 旧 V12 漫画风味继承锁
+## 12. 视觉风格锁
 
 ```yaml
-old_v12_style_memory:
-  preserve:
-    - 独立漫画页
-    - 彩色中国漫画连载感
-    - 偏日系人物线稿
-    - 清楚黑线
+style_lock:
+  target:
+    - 中国主流彩色漫画连载页
+    - 偏日系清线
+    - 清楚黑色线稿
     - 赛璐璐平涂
-    - 人物脸部清楚
-    - 场景有地标但不电影化
-    - 分镜清楚
-    - 动作关系清楚
-
-  avoid:
-    - 暗黑概念图
-    - 电影 CG
-    - 游戏宣传图
-    - 资产总览板
-    - JSON 表格入图
-    - P01-P10 缩略总览代替独立页
+    - 1到2层硬边阴影
+    - 人物表情明确
+    - 场景有空间感但不过度电影化
+    - 分镜黑边清楚
+    - 阅读顺序清楚
 ```
 
-统一风格提示词：
+正向提示：
 
 ```text
-中国漫画连载页，偏日系人物线稿，清晰黑色漫画线，赛璐璐平涂，平涂色块，1-2层硬边阴影，背景有地标和空间美感但不电影化，分镜黑边清楚，竖向滚动漫画，人物表情漫画化，强镜头切换，留白节奏，像人类漫画工作室连载页，不是暗黑概念图，不是资产总览图。
+中国主流彩色漫画连载页，偏日系人物线稿，清晰黑色漫画线，赛璐璐平涂，平涂色块，1-2层硬边阴影，竖向阅读友好，人物表情漫画化，镜头切换明确，分镜黑边清楚，动作关系清楚，场景有空间感但不电影化，像人类漫画工作室连载页。
 ```
 
-负面提示：
+负向提示：
 
 ```text
-AI poster, cinematic CG, game concept art, glossy painting, painterly rendering, oil painting, realistic skin, 3D face, excessive glow, volumetric light, depth of field, hyper detailed background, same face syndrome, character sheet only, infographic, summary page, thumbnails, readable test page, stick figure, wireframe, placeholder layout, python drawing, svg diagram, asset board mixed with comic pages, dark concept art, production board, json table in image
+AI poster, cinematic CG, game concept art, glossy painting, overrendered lighting, hyperreal background, same face syndrome, infographic, summary page, storyboard card, production board, character sheet mixed into comic page, scene sheet mixed into comic page, thumbnails as final result, stick figure, wireframe, python drawing, svg diagram.
 ```
 
 ---
 
-## 16. 交付层级隔离
-
-```yaml
-delivery_layer_separation:
-  principle:
-    - 生产资产、脚本文件、QC文件、漫画页必须分开交付
-    - 不允许把所有文件内容拼成一张图片
-    - 不允许把 character_bootstrap、scene_bootstrap、JSON表格和漫画页混在同一张图里
-
-  character_bootstrap:
-    output_type: 独立资产文件夹
-    forbid:
-      - 混入 comic_pages
-      - 画进 P01-Pxx
-      - 合成到最终漫画页
-      - 合成到 preview_sheet 主图
-
-  scene_bootstrap:
-    output_type: 独立资产文件夹
-    forbid:
-      - 混入 comic_pages
-      - 画进 P01-Pxx
-      - 合成到最终漫画页
-      - 合成到 preview_sheet 主图
-
-  metadata:
-    output_type: 独立文本文件
-    forbid:
-      - 画进 comic_pages
-      - 画进 preview_sheet
-      - 变成图片表格总览
-
-  comic_pages:
-    output_type: 独立漫画页文件夹
-    forbid:
-      - 资产总览图
-      - 流程看板
-      - JSON表格
-      - 角色设定栏
-      - 场景设定栏
-      - QC报告栏
-      - 一张图塞完整结果包
-      - 多页缩略图合集冒充独立页
-      - 双页合图冒充单页
-
-  preview_sheet:
-    output_type: 可选缩略图
-    allowed:
-      - 仅将已生成的独立漫画页缩略图排成总览
-    generate_after:
-      - all_individual_comic_pages_exist
-    forbid:
-      - 替代 comic_pages
-      - 混入 JSON 表格
-      - 混入 character_bootstrap
-      - 混入 scene_bootstrap
-      - 作为最终唯一图片
-```
-
----
-
-## 17. 中文后期排版规则
-
-```yaml
-lettering_layer_rule:
-  preferred_flow:
-    - 先生成无字或少字漫画页 comic_pages_raw/P01_no_text.png 到 Pxx_no_text.png
-    - 再用 lettering_data.json 添加中文对白、旁白、拟声词
-    - 最终输出带字版 comic_pages/P01.png 到 Pxx.png
-
-  required_outputs_when_possible:
-    - lettering_data.json
-
-  forbid:
-    - 让图像模型直接生成大量中文小字
-    - 中文乱码页直接通过
-    - 气泡遮挡人物脸
-    - 台词与角色关系不一致
-```
-
-如图像生成工具无法稳定生成中文，必须采用无字图 + 后期排版；不得让乱码中文进入最终成品页。
-
----
-
-## 18. 最终文件验证门槛与 output_manifest
-
-```yaml
-final_file_gate:
-  before_final_answer:
-    must_verify_files_exist:
-      - source_event_lock.json
-      - comic_pages/P01.png 到 Pxx.png
-      - handoff.json
-      - qc_report.json
-      - output_manifest.json
-    cold_start_extra_required:
-      - character_bootstrap/cast_master_sheet.png
-      - scene_bootstrap/scene_master_sheet.png
-
-  fail_if:
-    - only_one_composite_image_exists
-    - pages_are_only_thumbnails_inside_preview_sheet
-    - no_individual_page_files
-    - final_answer_contains_only_preview_sheet
-    - final_answer_contains_only_script_pack
-    - final_answer_contains_only_render_manifest
-    - source_event_lock_missing
-```
-
-```yaml
-output_manifest:
-  purpose: 防止口头说完成但文件不存在
-  must_include:
-    page_count:
-      expected: 6_or_8_or_10
-      actual: number
-    source_fidelity:
-      source_event_lock_exists: true_or_false
-      source_fidelity_status: PASS_or_FAIL
-      silent_originalization_detected: true_or_false
-    comic_pages:
-      P01.png: exists/type/validation_status
-      P02.png: exists/type/validation_status
-      Pxx.png: exists/type/validation_status
-    bootstrap:
-      character_bootstrap: exists/validation_status
-      scene_bootstrap: exists/validation_status
-    metadata:
-      handoff_json: exists
-      qc_report_json: exists
-      lettering_data_json: exists_if_used
-    usage_mode:
-      rights_mode: user_declared_private_noncommercial_if_declared
-      publication_mode: private_only_if_declared
-      commercial_mode: no_if_declared
-      workflow_blocked_by_rights: false_if_private_noncommercial_declared
-    final_status: PASS_or_IN_PROGRESS_or_BLOCKED_or_FAIL
-```
-
-`output_manifest.json` 中如果 `final_status` 不是 `PASS`，最终答复不得写“完成”。
-
----
-
-## 19. 分批继续协议
-
-```yaml
-batch_continuation_protocol:
-  when_cannot_finish_in_one_response:
-    status: IN_PROGRESS
-    must_output:
-      - production_state.json
-      - output_manifest.json
-      - next_batch_instruction.txt
-    must_not_say:
-      - 完成
-      - 已交付完整结果包
-      - P01-Pxx已生成
-    final_result_invalid_until:
-      - all_expected_comic_pages_exist
-      - handoff.json_exists
-      - qc_report.json_exists
-      - output_manifest_final_status_PASS
-      - source_event_lock_exists
-
-  next_batch_instruction_must_include:
-    - 已完成文件列表
-    - 缺失文件列表
-    - 下一批必须生成的文件
-    - 继续口令
-
-  continue_prompt_template:
-    text: 继续按 production_state.json 从缺失文件开始生成，不要重做已完成文件；直到全部预期 comic_pages、handoff.json、qc_report.json、output_manifest.json、source_event_lock.json 全部存在，才允许说完成。
-```
-
-如果被迫停止，必须明确告诉用户下一步操作。
-
----
-
-## 20. 图像能力门槛
-
-```yaml
-image_generation_capability_gate:
-  if_real_image_generation_available:
-    action:
-      - generate_source_event_lock
-      - generate_character_bootstrap
-      - generate_scene_bootstrap
-      - generate_all_comic_pages
-      - do_not_stop_at_prompts
-
-  if_real_image_generation_unavailable:
-    status: BLOCKED
-    action:
-      - stop
-      - explain_unable_to_generate_images
-      - output_script_pack_only_if_user_accepts
-      - provide_next_step_instruction
-
-  forbid_as_comic_pages:
-    - python_drawn_pages
-    - svg_diagrams
-    - html_canvas_layouts
-    - stick_figure_pages
-    - wireframe_storyboards
-    - blank_layout_pages
-    - script_card_pages
-    - readable_test_pages
-```
-
-不得用程序绘图、简笔图、线框图冒充漫画成品页。
-
----
-
-## 21. 自动工作流
+## 13. 生成与交付工作流
 
 ```yaml
 workflow:
   step_1_read_inputs:
     action:
-      - 读取小说当前章节原文或链接内容
-      - 读取基础角色图，如果有
-      - 读取上一期 handoff.json，如果有
-      - 读取本 To-Comic-StudioFlow.md
+      - 读取小说正文或链接
+      - 读取 To-Comic-StudioFlow.md
+      - 读取基础角色图（如有）
+      - 读取上一期 handoff.json（如有）
+      - 记录是否为私人非商业模式
 
-  step_2_mode_rights_and_source_gate:
+  step_2_source_gate:
     action:
-      - 检查是否为 V12.5.1
-      - 检查是否触发 private_noncommercial_mode
-      - 检查是否读到章节正文
-      - 如果未读到正文，停止并要求用户粘贴正文
+      - 检查是否获取到真实章节正文
+    fail_if:
+      - only_title
+      - unreadable_url
+      - not_enough_text
+    if_fail:
+      - stop
+      - ask_user_to_paste_text
 
   step_3_source_event_lock:
     output:
       - source_event_lock.json
     action:
-      - 锁定章节标题、核心角色、关键法宝、事件顺序、冲突轴和结尾钩子
-      - 明确 must_not_change 与 allowed_compression
+      - 锁定主角
+      - 锁定敌人
+      - 锁定关键法宝
+      - 锁定事件顺序
+      - 锁定冲突关系
+      - 锁定结尾钩子
 
-  step_4_page_count_and_director_beat:
+  step_4_director_outline:
     output:
-      - page_count_decision
       - director_beat_sheet.json
     action:
-      - 按 page_count_policy 决定 6 / 8 / 10 页
-      - 为每页设计 reader_question、page_answer、emotional_turn、visual_memory、page_end_hook
+      - 按固定 10 页结构设计每页 page_goal / page_conflict / emotional_turn / visual_memory / end_hook
 
-  step_5_start_mode_detection:
-    action:
-      - 判断是否有基础角色图
-      - 判断是否有上一期 handoff.json
-      - 如果二者都没有，进入 cold_start_character_bootstrap 与 scene_bootstrap
-
-  step_6_bootstrap_assets:
+  step_5_character_bootstrap:
+    condition:
+      - if_no_base_character_images_or_need_refresh
     output:
       - character_bootstrap/
+    action:
+      - 生成鲜明角色基础包
+      - 锁定角色记忆点
+
+  step_6_scene_bootstrap:
+    output:
       - scene_bootstrap/
-    note: 生成后不得停顿，不得把资产表拼入漫画页，必须继续后续步骤
+    action:
+      - 生成漫画化场景基础包
+      - 锁定主场景与关键道具
 
-  step_7_chapter_analysis:
-    output:
-      - chapter_card.json
-
-  step_8_lock_assets:
-    output:
-      - character_lock.json
-      - scene_lock.json
-
-  step_9_page_script:
+  step_7_page_script:
     output:
       - page_script.json
-    gate:
-      - 必须通过 page_script_fidelity_gate
-      - 不得改变 source_event_lock 的 must_preserve 事件
-
-  step_10_pre_page_gate:
     action:
-      - 检查 source_event_lock
-      - 检查角色图锚点
-      - 检查场景图锚点
-      - 检查图像生成能力
-      - 若缺失，补齐后继续；若无法补齐，停止，不得生成占位页
+      - 生成 P01-P10 页脚本
+      - 每页 5-7 格
+      - 每页必须有起承转钩
+      - 每页必须通过 anti_summary_rule
 
-  step_11_generate_comic_pages_raw:
+  step_8_raw_comic_pages:
     preferred_output:
-      - comic_pages_raw/P01_no_text.png 到 Pxx_no_text.png
+      - comic_pages_raw/P01_no_text.png ~ P10_no_text.png
+    action:
+      - 先出无字或少字图（如可行）
 
-  step_12_lettering:
+  step_9_lettering:
     output:
-      - lettering_data.json
-      - comic_pages/P01.png 到 Pxx.png
+      - comic_pages/P01.png ~ P10.png
+    action:
+      - 添加对白、旁白、拟声
+      - 文字必须可读且有内容
 
-  step_13_optional_preview_sheet:
-    condition: all_individual_comic_pages_exist
-    output:
-      - preview_sheet.jpg
-    note: 仅作为附加缩略图，不得替代漫画页
-
-  step_14_qc_report:
-    output:
-      - qc_report.json
-    must_include:
-      - source_fidelity
-      - rights_mode
-      - output_validation
-
-  step_15_output_manifest:
-    output:
-      - output_manifest.json
-
-  step_16_output_handoff:
+  step_10_handoff_and_qc:
     output:
       - handoff.json
+      - qc_report.json
 ```
 
 ---
 
-## 22. 页面结构与分镜规则
+## 14. 交付清单
+
+### 必须交付
+
+```text
+source_event_lock.json
+character_bootstrap/
+scene_bootstrap/
+page_script.json
+director_beat_sheet.json
+comic_pages/P01.png
+comic_pages/P02.png
+comic_pages/P03.png
+comic_pages/P04.png
+comic_pages/P05.png
+comic_pages/P06.png
+comic_pages/P07.png
+comic_pages/P08.png
+comic_pages/P09.png
+comic_pages/P10.png
+handoff.json
+qc_report.json
+```
+
+### 可选交付
+
+```text
+preview_sheet.jpg
+```
+
+### 交付硬规则
 
 ```yaml
-page_structure:
-  P01: 地点建立 + 主角发现异常
-  P02: 关键物/关键规则识别
-  P03: 主角行动，触发核心变化
-  P04: 外部压力逼近
-  P05: 敌方大场面登场
-  P06: 正面对峙，敌方提出压力
-  P07: 主角亮身份或亮底牌，暂时稳局
-  P08: 旧怨/新冲突升级
-  P09: 主角反问或反制，夺回节奏
-  P10: 本章标题落点 + 下一期钩子
-
-page_panel_rule:
-  panels_per_page: 3-6
-  max_focus_faces: 3
-  max_dialogue_bubbles: 5
-  one_page_one_change: true
-  must_have_per_page:
-    - 1个主视觉大格
-    - 1个特写格
-    - 1个反应格或静默格
-    - 至少1个非普通横格
+delivery_hard_rules:
+  hard_fail_if:
+    - preview_sheet_replaces_P01_to_P10
+    - character_bootstrap_mixed_into_comic_pages
+    - scene_bootstrap_mixed_into_comic_pages
+    - json_or_qc_tables_drawn_into_comic_pages
+    - one_big_collage_used_as_final_result
 ```
 
 ---
 
-## 23. 用户启动提示词
+## 15. handoff.json 要求
 
-### 首次无角色图
+```json
+{
+  "version": "V13.0",
+  "chapter_title": "",
+  "page_count": 10,
+  "core_characters": [],
+  "key_props": [],
+  "main_scene_state": [],
+  "visual_style_lock": {
+    "line": "clean manga line",
+    "color": "cel shading",
+    "render": "non-CG comic rendering"
+  },
+  "unresolved_hooks": [],
+  "next_chapter_attention_points": []
+}
+```
+
+---
+
+## 16. qc_report.json 要求
+
+```json
+{
+  "version": "V13.0",
+  "rights_mode": "user_declared_private_noncommercial",
+  "source_fidelity": {
+    "status": "PASS",
+    "core_characters_preserved": true,
+    "key_props_preserved": true,
+    "event_sequence_preserved": true,
+    "ending_hook_preserved": true,
+    "silent_originalization_detected": false
+  },
+  "comic_quality": {
+    "fixed_10_pages": true,
+    "all_pages_5_to_7_panels": true,
+    "anti_summary_pass": true,
+    "character_distinction_pass": true,
+    "anti_cg_pass": true,
+    "dialogue_readability_pass": true
+  },
+  "delivery_check": {
+    "P01_to_P10_exist": true,
+    "character_bootstrap_exist": true,
+    "scene_bootstrap_exist": true,
+    "handoff_exist": true
+  }
+}
+```
+
+---
+
+## 17. 验收标准
+
+### 17.1 剧情验收
+
+```yaml
+source_fidelity_acceptance:
+  required:
+    - main_character_correct
+    - antagonist_correct
+    - key_props_correct
+    - event_order_correct
+    - ending_hook_correct
+  hard_fail_if:
+    - story_silently_rewritten
+    - renamed_core_characters
+    - replaced_key_props
+    - changed_conflict_axis
+```
+
+### 17.2 漫画导演验收
+
+```yaml
+director_acceptance:
+  required:
+    - exactly_10_pages
+    - every_page_has_5_to_7_panels
+    - every_page_has_conflict
+    - every_page_has_turn
+    - every_page_has_hook
+    - no_plot_summary_pages
+```
+
+### 17.3 角色验收
+
+```yaml
+character_acceptance:
+  required:
+    - main_characters_distinct
+    - support_characters_distinct
+    - child_or_mascot_stable
+    - no_same_face_old_men
+```
+
+### 17.4 视觉验收
+
+```yaml
+style_acceptance:
+  required:
+    - chinese_manhua_serial_feel
+    - japanese_influenced_clean_line
+    - cel_shading
+    - no_cg_concept_art
+    - no_poster_like_rendering
+    - background_not_stealing_focus
+```
+
+### 17.5 交付验收
+
+```yaml
+delivery_acceptance:
+  required:
+    - source_event_lock_exists
+    - character_bootstrap_exists
+    - scene_bootstrap_exists
+    - P01_to_P10_all_exist
+    - handoff_exists
+    - qc_report_exists
+```
+
+---
+
+## 18. 公开使用提示模板
+
+### 首次冷启动模板
 
 ```text
 请读取我上传的：
@@ -1108,113 +859,61 @@ page_panel_rule:
 
 这是个人娱乐用途，非商业化，不公开发布，仅用于内部流程测试。
 这是首次冷启动，没有基础角色图，也没有 handoff.json。
-请按 V12.5.1 工作。
+请按 To-Comic-StudioFlow V13.0 工作。
 
-重要：版权/权利状态只记录在 qc_report.json，不要因此改写小说核心剧情。
-必须生成 source_event_lock.json，并严格保留本章主角、敌人、关键法宝、事件顺序、冲突关系和结尾钩子。
-如果因为权利问题无法继续，请直接停止说明，不要静默改成原创剧情。
+要求：
+- 固定输出 10 页漫画：P01.png 到 P10.png
+- 每页分镜不能少于 5 格，标准 6 格，最多 7 格
+- 禁止把漫画做成剧情摘要
+- 台词要能表达内容，不要为了防乱码而缩水成空话
+- 必须先生成 source_event_lock.json，严格保留主角、敌人、关键法宝、事件顺序、冲突关系和结尾钩子
+- 角色基础包必须鲜明、有记忆点，接近中国主流漫画角色包水平
+- 禁止 CG 概念图、游戏宣传图、海报化结果
+- 必须输出：
+  source_event_lock.json
+  character_bootstrap/
+  scene_bootstrap/
+  page_script.json
+  comic_pages/P01.png 到 P10.png
+  handoff.json
+  qc_report.json
 
-然后继续生成完整结果包：
-- source_event_lock.json
-- character_bootstrap/
-- scene_bootstrap/
-- chapter_card.json
-- director_beat_sheet.json
-- character_lock.json
-- scene_lock.json
-- page_script.json
-- comic_pages_raw/P01_no_text.png 到 Pxx_no_text.png（如可行）
-- lettering_data.json
-- comic_pages/P01.png 到 Pxx.png 独立漫画页
-- handoff.json
-- qc_report.json
-- output_manifest.json
-- preview_sheet.jpg（可选，不能替代独立漫画页）
+如果不能忠实改编，请直接停止说明，不要静默改写剧情。
+```
 
-如果不能一次完成，必须输出 production_state.json、output_manifest.json、next_batch_instruction.txt，并标记 IN_PROGRESS，不得说完成。
-如果无法生成真实图片，不要用简笔图、线框图、SVG 或 Python 示意图替代，也不要把脚本包说成完成。
+### 下一章继续模板
+
+```text
+请读取我上传的：
+1. 下一章小说原文或小说地址
+2. To-Comic-StudioFlow.md
+3. 基础角色图或上一期 character_bootstrap
+4. 上一期 handoff.json
+
+这是个人娱乐用途，非商业化，不公开发布，仅用于内部流程测试。
+请按 To-Comic-StudioFlow V13.0 工作，继续输出本章 P01.png 到 P10.png。
+
+要求继续保持：
+- 固定10页
+- 每页5到7格
+- 剧情保真
+- 角色稳定
+- 禁止剧情摘要
+- 禁止 CG 概念图
 ```
 
 ---
 
-## 24. 验收标准
+## 19. V13.0 核心总结
 
-```yaml
-acceptance:
-  source_fidelity:
-    source_event_lock: required
-    core_characters_preserved: required
-    key_props_preserved: required
-    event_sequence_preserved: required
-    ending_hook_preserved: required
-    silent_originalization_detected: false
-
-  creative_director:
-    page_count_selected_by_density: required
-    director_page_beat_per_page: required
-    character_distinction: required
-    special_character_budget: required
-    scene_comic_style: required
-    panel_language_variety: required
-    dialogue_short_and_characterful: required
-
-  cold_start:
-    if_no_base_character_images_and_no_handoff:
-      character_bootstrap: required
-      scene_bootstrap: required
-      cast_master_sheet: required
-      scene_master_sheet: required
-      character_bootstrap_json: required
-      scene_bootstrap_json: required
-      no_placeholder_pages: required
-
-  complete_result:
-    source_event_lock: required
-    chapter_card: required
-    director_beat_sheet: required
-    character_lock: required
-    scene_lock: required
-    page_script: required
-    comic_pages_individual_files: required
-    handoff: required
-    qc_report: required
-    output_manifest: required
-
-  hard_fail_if:
-    - source_event_lock_missing
-    - page_script_changed_core_plot
-    - comic_pages_changed_core_plot
-    - rights_mode_caused_story_rewrite
-    - model_generated_originalized_replacement_without_user_request
-    - character_names_or_key_props_changed_silently
-    - comic_pages_generated_without_character_bootstrap_when_cold_start
-    - comic_pages_generated_without_scene_bootstrap_when_cold_start
-    - pages_are_stick_figures
-    - pages_are_wireframes
-    - pages_are_svg_or_python_diagrams
-    - pages_are_script_cards
-    - no_downloadable_character_bootstrap_pack
-    - no_downloadable_scene_bootstrap_pack
-    - no_handoff_json
-    - no_output_manifest_json
-    - final_output_is_script_pack_only
-    - final_output_is_partial_pages_only
-    - asset_board_mixed_with_comic_pages_as_single_image
-    - preview_sheet_replaces_individual_pages
-    - production_board_presented_as_final_comic
-    - final_status_is_not_PASS_but_answer_says_complete
-
-  private_noncommercial:
-    if_declared:
-      rights_mode_recorded: required
-      workflow_blocked_by_rights: false
-      no_repeated_rights_interruption: required
-      rights_mode_does_not_modify_story: required
-
-  manga_feel:
-    line_art_visible: required
-    cel_shading_visible: required
-    no_cg_background: required
-    no_ai_poster: required
-    chinese_comic_serial_page_feel: required
+```text
+1. 固定 10 页，不再摇摆
+2. 每页固定 5~7 格，低于 5 格直接失败
+3. 先锁剧情，再做漫画
+4. 严禁剧情摘要
+5. 台词要表达内容，不为防乱码而缩水成空话
+6. 角色基础包要鲜明、有记忆点
+7. 场景只服务人物和动作，禁 CG 概念图
+8. 个人娱乐 / 非商业 / 不公开发布，只记录，不干扰剧情
+9. 先像漫画，再保证交付完整
 ```
