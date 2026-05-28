@@ -11,7 +11,7 @@
 
 下图是《永生》第254章《一个一个来》的 P01-P10 测试流程预览图：
 
-![Uploading Yongsheng_254_SKIIS_V12_P01_P10_preview.jpg…]()
+<img width="1414" height="812" alt="61e2da0c565bc66bc52e9ff6d4769b0b" src="https://github.com/user-attachments/assets/12d11f92-a064-4726-ab6b-04506c1ae8f6" />
 
 
 说明：该图用于公开展示工作流效果。正式项目建议继续按“单格无字图 → 页面合成 → 中文排版”的流程提高完成度。
