@@ -1,15 +1,15 @@
-# To-Comic-StudioFlow V12.2
+# To-Comic-StudioFlow V12.4
 
 > 单文件版中国小说转漫画生产流程。  
-> V12.2 的核心是 **硬门槛**：首次没有基础角色图和 handoff 时，必须先生成 `character_bootstrap/` 与 `scene_bootstrap/`，再生成 `comic_pages/P01.png` 到 `P10.png`。  
-> 不允许用简笔图、线框图、SVG/Python 示意图、脚本卡片页或“可阅读测试页”冒充漫画成品页。
+> V12.4 的核心是：**交付层级隔离 + 漫画页优先 + 旧V12漫画风味回归 + 冷启动资产硬门槛**。  
+> 首次没有基础角色图和 `handoff.json` 时，必须先生成 `character_bootstrap/` 与 `scene_bootstrap/`，但这些只是独立资产包，不得混入漫画页。最终主交付必须是 `comic_pages/P01.png` 到 `comic_pages/P10.png` 十张独立漫画页。
 
 ---
 
 ## 0. 一句话目标
 
 ```text
-输入一章小说，直接输出中国漫画 P01-P10、角色基础图包、场景基础图包和 handoff.json；下一章继续上传本文件 + 基础角色图/角色基础包 + 上一期 handoff + 新章节原文/链接，即可连续生产。
+输入一章小说，最终输出十张独立中国漫画页 P01.png 到 P10.png，并附带角色基础包、场景基础包、脚本文件、handoff.json 与 qc_report.json；不得把所有内容合成一张大图，不得用预览图替代漫画页。
 ```
 
 ---
@@ -19,22 +19,115 @@
 ```yaml
 version_guard:
   required_file_name: To-Comic-StudioFlow.md
-  required_version: V12.2
+  required_version: V12.4
   deprecated_names:
     - SKIIS_V12.md
     - SKIIS_V12(1).md
     - SKIIS_V12(2).md
+    - To-Comic-StudioFlow V12.1
+    - To-Comic-StudioFlow V12.2
+    - To-Comic-StudioFlow V12.3
   if_uploaded_old_file:
     action:
-      - warn_user: 请使用 To-Comic-StudioFlow.md V12.2
-      - continue_only_if_content_contains: To-Comic-StudioFlow V12.2
+      - warn_user: 请使用 To-Comic-StudioFlow.md V12.4
+      - continue_only_if_content_contains: To-Comic-StudioFlow V12.4
 ```
 
-用户上传旧版 `SKIIS_V12.md` 时，系统必须提醒版本风险。若旧文件没有 V12.2 的硬门槛规则，不得按旧规则生成漫画页。
+旧版文件不得继续执行漫画生成。若文件不是 V12.4，必须提示用户换文件。
 
 ---
 
-## 2. 三种启动模式
+## 2. 交付层级隔离：最重要规则
+
+```yaml
+delivery_layer_separation:
+  principle:
+    - 生产资产、脚本文件、QC文件、漫画页必须分开交付
+    - 不允许把所有文件内容拼成一张图片
+    - 不允许把 character_bootstrap、scene_bootstrap、JSON表格和漫画页混在同一张图里
+
+  character_bootstrap:
+    output_type: 独立资产文件夹
+    allowed_files:
+      - cast_master_sheet.png
+      - char_A_main_01.png
+      - char_B_support_01.png
+      - char_C_enemy_01.png
+      - character_bootstrap.json
+    forbid:
+      - 混入 comic_pages
+      - 画进 P01-P10
+      - 合成到最终漫画页
+      - 合成到 preview_sheet 主图
+
+  scene_bootstrap:
+    output_type: 独立资产文件夹
+    allowed_files:
+      - scene_master_sheet.png
+      - scene_key_location_01.png
+      - prop_key_item_01.png
+      - scene_bootstrap.json
+    forbid:
+      - 混入 comic_pages
+      - 画进 P01-P10
+      - 合成到最终漫画页
+      - 合成到 preview_sheet 主图
+
+  metadata:
+    output_type: 独立文本文件
+    allowed_files:
+      - chapter_card.json
+      - director_beat_sheet.json
+      - character_lock.json
+      - scene_lock.json
+      - page_script.json
+      - handoff.json
+      - qc_report.json
+    forbid:
+      - 画进 comic_pages
+      - 画进 preview_sheet
+      - 变成图片表格总览
+
+  comic_pages:
+    output_type: 独立漫画页文件夹
+    required_files:
+      - P01.png
+      - P02.png
+      - P03.png
+      - P04.png
+      - P05.png
+      - P06.png
+      - P07.png
+      - P08.png
+      - P09.png
+      - P10.png
+    forbid:
+      - 资产总览图
+      - 流程看板
+      - JSON表格
+      - 角色设定栏
+      - 场景设定栏
+      - QC报告栏
+      - 一张图塞完整结果包
+      - P01-P10缩略图合集冒充独立页
+
+  preview_sheet:
+    output_type: 可选缩略图
+    allowed:
+      - 仅将 P01.png 到 P10.png 缩略图排成总览
+    generate_after:
+      - all_individual_comic_pages_exist
+    forbid:
+      - 替代 P01-P10
+      - 混入 JSON 表格
+      - 混入 character_bootstrap
+      - 混入 scene_bootstrap
+      - 作为最终唯一图片
+```
+
+---
+
+## 3. 三种启动模式
 
 ### A. 首次冷启动：没有基础角色图，也没有 handoff
 
@@ -45,19 +138,22 @@ version_guard:
 2. To-Comic-StudioFlow.md
 ```
 
-系统必须先生成：
+系统内部必须先生成：
 
 ```text
 character_bootstrap/
 scene_bootstrap/
 ```
 
-然后才允许生成：
+然后必须继续生成：
 
 ```text
 comic_pages/P01.png ... P10.png
 handoff.json
+qc_report.json
 ```
+
+不得停在角色包、场景包、脚本包或 prompt 包。
 
 ### B. 首次标准启动：有基础角色图，没有 handoff
 
@@ -69,7 +165,7 @@ handoff.json
 3. 基础角色图
 ```
 
-系统自动新建空白 `handoff.json`，并以用户上传的基础角色图作为最高优先级视觉锚点。仍需生成或补全 `scene_bootstrap/`，用于保证场景美术连续。
+系统自动新建空白 `handoff.json`，以用户上传的基础角色图作为最高优先级视觉锚点，并补齐 `scene_bootstrap/`。
 
 ### C. 下一章继续：有上一期 handoff
 
@@ -82,13 +178,11 @@ handoff.json
 4. 上一期 handoff.json
 ```
 
-系统必须继承上一期 `handoff.json` 的角色外观、道具状态、场景状态和未解决钩子，然后直接生成下一章 P01-P10 与新的 `handoff.json`。
+系统必须继承上一期 `handoff.json` 的角色、道具、场景、未解决钩子，继续生成下一章 P01-P10 与新的 `handoff.json`。
 
 ---
 
-## 3. 正文读取门槛
-
-如果用户提供的是小说链接，系统必须先读取章节正文。只读到标题、只读到 URL、只读到网页说明，不得生成漫画页。
+## 4. 正文读取门槛
 
 ```yaml
 source_text_gate:
@@ -111,11 +205,11 @@ source_text_gate:
       - do_not_generate_comic_pages
 ```
 
+如果只读取到标题或链接，不得生成漫画页。
+
 ---
 
-## 4. 冷启动角色基础图硬门槛
-
-当用户没有上传基础角色图，且没有上一期 `handoff.json` 时，系统必须进入“冷启动角色建档模式”。
+## 5. 冷启动资产硬门槛
 
 ```yaml
 cold_start_trigger:
@@ -123,86 +217,16 @@ cold_start_trigger:
   no_previous_handoff: true
 ```
 
-冷启动禁止项：
-
-```yaml
-cold_start_forbid:
-  - 不允许直接生成 comic_pages/P01-P10
-  - 不允许输出无角色漫画页
-  - 不允许输出简笔占位角色
-  - 不允许生成章节总览图冒充漫画页
-  - 不允许只输出 JSON 而不生成角色基础图
-  - 不允许只输出角色说明而不生成角色基础图
-```
-
-必须先输出真实图片文件和 JSON：
-
-```yaml
-cold_start_required_outputs:
-  - character_bootstrap/cast_master_sheet.png
-  - character_bootstrap/char_A_main_01.png
-  - character_bootstrap/char_B_support_01.png
-  - character_bootstrap/char_C_enemy_01.png
-  - character_bootstrap/character_bootstrap.json
-```
-
-文件级硬门槛：
-
-```yaml
-character_bootstrap_file_gate:
-  cold_start_must_have_actual_files:
-    - character_bootstrap/cast_master_sheet.png
-    - character_bootstrap/char_A_main_01.png
-    - character_bootstrap/character_bootstrap.json
-
-  fail_if:
-    - only_text_description_without_images
-    - only_character_plan_without_downloadable_files
-    - only_json_without_visual_character_sheet
-    - placeholder_character_sheet
-    - stick_figure_character_sheet
-```
-
-角色图生成来源：
-
-```yaml
-character_bootstrap_sources:
-  text_explicit:
-    use: 小说中明确写出的外貌、身份、服装、法宝、称谓
-  text_inferred:
-    use: 从角色行为、语气、地位、战斗方式推断气质和视觉特征
-  genre_inferred:
-    use: 当小说没有明确外貌时，根据题材、门派、修为、身份生成临时视觉方案
-  user_base_image:
-    use: 如果用户后来上传基础角色图，必须覆盖系统推断图
-```
-
-`character_bootstrap.json` 必须标记每个角色信息来源：
-
-```yaml
-source_type:
-  - text_explicit
-  - text_inferred
-  - genre_inferred
-  - user_base_image
-```
-
----
-
-## 5. 场景基础图硬门槛
-
-首次冷启动不仅要有角色，还必须有场景美术锚点。否则会出现空白背景、低美感、无场景连续的问题。
-
-```yaml
-scene_bootstrap_required_when:
-  - first_cold_start
-  - chapter_has_new_key_location
-  - previous_handoff_has_no_scene_state
-```
-
-必须输出：
+冷启动必须先输出真实图片文件与 JSON：
 
 ```text
+character_bootstrap/
+  cast_master_sheet.png
+  char_A_main_01.png
+  char_B_support_01.png
+  char_C_enemy_01.png
+  character_bootstrap.json
+
 scene_bootstrap/
   scene_master_sheet.png
   scene_key_location_01.png
@@ -210,7 +234,213 @@ scene_bootstrap/
   scene_bootstrap.json
 ```
 
-场景基础图必须包含：
+但这些资产包不得变成最终主图，也不得与漫画页混在一张图。
+
+```yaml
+bootstrap_file_gate:
+  fail_if:
+    - only_text_description_without_images
+    - only_json_without_visual_sheet
+    - placeholder_character_sheet
+    - placeholder_scene_sheet
+    - stick_figure_character_sheet
+    - blank_scene_sheet
+    - asset_board_used_as_final_result
+```
+
+---
+
+## 6. 漫画页优先级
+
+```yaml
+comic_page_first_rule:
+  primary_delivery:
+    - comic_pages/P01.png
+    - comic_pages/P02.png
+    - comic_pages/P03.png
+    - comic_pages/P04.png
+    - comic_pages/P05.png
+    - comic_pages/P06.png
+    - comic_pages/P07.png
+    - comic_pages/P08.png
+    - comic_pages/P09.png
+    - comic_pages/P10.png
+
+  secondary_delivery:
+    - character_bootstrap/
+    - scene_bootstrap/
+    - metadata json files
+    - preview_sheet.jpg
+
+  final_answer_order:
+    1: comic_pages/P01.png 到 P10.png
+    2: handoff.json
+    3: character_bootstrap 与 scene_bootstrap
+    4: qc_report.json
+    5: preview_sheet.jpg 如果存在
+```
+
+如果只生成 `preview_sheet.jpg` 或一张合成总览图，必须判定失败。
+
+---
+
+## 7. 最终文件验证门槛
+
+```yaml
+final_file_gate:
+  before_final_answer:
+    must_verify_files_exist:
+      - comic_pages/P01.png
+      - comic_pages/P02.png
+      - comic_pages/P03.png
+      - comic_pages/P04.png
+      - comic_pages/P05.png
+      - comic_pages/P06.png
+      - comic_pages/P07.png
+      - comic_pages/P08.png
+      - comic_pages/P09.png
+      - comic_pages/P10.png
+      - handoff.json
+      - qc_report.json
+    cold_start_extra_required:
+      - character_bootstrap/cast_master_sheet.png
+      - scene_bootstrap/scene_master_sheet.png
+
+  fail_if:
+    - only_one_composite_image_exists
+    - P01_to_P10_are_only_thumbnails_inside_preview_sheet
+    - no_individual_page_files
+    - final_answer_contains_only_preview_sheet
+    - final_answer_contains_only_script_pack
+    - final_answer_contains_only_render_manifest
+```
+
+---
+
+## 8. 图像能力门槛
+
+```yaml
+image_generation_capability_gate:
+  if_real_image_generation_available:
+    action:
+      - generate_character_bootstrap
+      - generate_scene_bootstrap
+      - generate_all_comic_pages
+      - do_not_stop_at_prompts
+
+  if_real_image_generation_unavailable:
+    action:
+      - stop
+      - explain_unable_to_generate_images
+      - output_script_pack_only_if_user_accepts
+
+  forbid_as_comic_pages:
+    - python_drawn_pages
+    - svg_diagrams
+    - html_canvas_layouts
+    - stick_figure_pages
+    - wireframe_storyboards
+    - blank_layout_pages
+    - script_card_pages
+    - readable_test_pages
+```
+
+不得用程序绘图、简笔图、线框图冒充漫画成品页。
+
+---
+
+## 9. 旧 V12 漫画风味继承锁
+
+V12.4 的目标不是改成暗黑资产图，而是在旧 V12 中国漫画连载风味基础上补齐冷启动资产。
+
+```yaml
+visual_style_regression_lock:
+  reference_target:
+    - 旧V12 P01-P10 中国漫画连载页风味
+
+  preserve:
+    - 独立漫画页结构
+    - 每页 3-6 个分镜
+    - 清晰角色近景
+    - 战场/场景远景
+    - 明确阅读顺序
+    - 赛璐璐线稿感
+    - 中国漫画连载感
+    - 明亮或中性场景光线
+    - 法宝光效服务剧情，不压过人物
+
+  avoid:
+    - 暗黑概念图
+    - 游戏宣传图
+    - 电影海报
+    - 资产总览板
+    - 全流程拼图
+    - 把角色设定图和漫画页混在一起
+    - 把场景设定图和漫画页混在一起
+```
+
+统一风格提示词：
+
+```text
+中国漫画连载页，偏日系人物线稿，清晰黑色漫画线，赛璐璐平涂，平涂色块，1-2层硬边阴影，背景有地标和空间美感但不电影化，分镜黑边清楚，竖向滚动漫画，人物表情漫画化，强镜头切换，留白节奏，像人类漫画工作室连载页，不是暗黑概念图，不是资产总览图。
+```
+
+负面提示：
+
+```text
+AI poster, cinematic CG, game concept art, glossy painting, painterly rendering, oil painting, realistic skin, 3D face, excessive glow, volumetric light, depth of field, hyper detailed background, same face syndrome, character sheet only, infographic, summary page, thumbnails, readable test page, stick figure, wireframe, placeholder layout, python drawing, svg diagram, asset board mixed with comic pages, dark concept art, production board, json table in image
+```
+
+---
+
+## 10. 角色基础图标准
+
+```yaml
+character_bootstrap_standard:
+  cast_master_sheet:
+    purpose: 展示本章主要角色关系和视觉差异
+    must_show:
+      - 主角
+      - 关键配角
+      - 主要敌方
+      - 群像阵营色块
+      - 身高/体型对比
+      - 发型差异
+      - 脸型差异
+      - 服装主色块
+      - 标志性道具
+
+  single_character_card:
+    must_show:
+      - 3/4角度半身或全身
+      - 正脸识别
+      - 发型
+      - 脸型
+      - 服装主轮廓
+      - 主色块
+      - 标志性道具
+      - 基础表情
+
+  first_bootstrap_do_not:
+    - 不做复杂三视图
+    - 不做完整表情包
+    - 不做武器拆解页
+    - 不做服装结构爆炸图
+```
+
+角色优先级：
+
+```yaml
+character_anchor_priority:
+  1: 用户上传的基础角色图
+  2: 上一期 handoff.json 中的角色状态
+  3: 本期自动生成的 character_bootstrap
+  4: 小说文字推断
+```
+
+---
+
+## 11. 场景基础图标准
 
 ```yaml
 scene_bootstrap_standard:
@@ -234,241 +464,13 @@ scene_bootstrap_standard:
       - 本章关键道具外观
       - 道具发光/状态变化
       - 道具归属
-```
 
-禁止：
-
-```yaml
-scene_bootstrap_forbid:
-  - blank_background
-  - only_color_blocks
-  - only_text_description
-  - no_landmark
-  - no_prop_visual
-```
-
----
-
-## 6. 图像能力门槛
-
-如果当前环境无法生成真实图像，系统必须停止，不得用程序绘图或占位图冒充漫画页。
-
-```yaml
-image_generation_capability_gate:
-  if_real_image_generation_unavailable:
-    action:
-      - stop
-      - explain_unable_to_generate_images
-      - output_script_pack_only_if_user_accepts
-
-  forbid_as_comic_pages:
-    - python_drawn_pages
-    - svg_diagrams
-    - html_canvas_layouts
-    - stick_figure_pages
-    - wireframe_storyboards
-    - blank_layout_pages
-    - script_card_pages
-    - readable_test_pages
-```
-
----
-
-## 7. 生成漫画页前置门槛
-
-```yaml
-pre_page_gate:
-  before_generating_comic_pages:
-    must_have:
-      - chapter_main_text
-      - page_script.json
-    must_have_one_of:
-      - base_character_images
-      - previous_handoff_with_character_state
-      - generated_character_bootstrap
-    must_have_one_of_scene:
-      - previous_handoff_with_scene_state
-      - generated_scene_bootstrap
-
-  if_missing_character_anchor:
-    action: create_character_bootstrap_first
-
-  if_missing_scene_anchor:
-    action: create_scene_bootstrap_first
-
-  if_missing_real_image_generation:
-    action: stop
-```
-
----
-
-## 8. 默认输出结果包
-
-默认不要停在 P01 测试页，也不要停在 P08 测试页。除非用户明确说“先测试”，否则直接输出完整结果包。
-
-```yaml
-default_outputs:
-  - character_bootstrap/            # 冷启动时必须输出
-  - scene_bootstrap/                # 冷启动或新场景时必须输出
-  - chapter_card.json
-  - director_beat_sheet.json
-  - character_lock.json
-  - scene_lock.json
-  - page_script.json
-  - comic_pages/
-      - P01.png
-      - P02.png
-      - P03.png
-      - P04.png
-      - P05.png
-      - P06.png
-      - P07.png
-      - P08.png
-      - P09.png
-      - P10.png
-  - handoff.json
-  - qc_report.json
-```
-
-严禁把 `P01-P10.png` 当成一个总览图。必须是 10 个独立页面文件：`P01.png` 到 `P10.png`。
-
----
-
-## 9. 漫画页质量门槛
-
-删除“可阅读测试页”概念。允许的是正式视觉页或生产预览漫画页，不允许脚本示意页。
-
-```yaml
-comic_page_quality_gate:
-  allowed:
-    - rendered_comic_page
-    - production_preview_comic_page
-
-  forbidden:
-    - readable_test_page
-    - placeholder_page
-    - wireframe_page
-    - stick_figure_page
-    - blank_layout_page
-    - script_card_page
-    - python_drawn_schema
-    - svg_diagram
-    - chapter_summary_sheet
-```
-
-每页必须满足：
-
-```yaml
-page_qc:
-  each_page:
-    must_contain:
-      - at_least_one_visible_story_character_if_script_requires
-      - clear_story_action
-      - clear_relationship_or_conflict
-      - visual_continuity_with_character_lock
-      - scene_or_background_when_required
-      - panel_shape_variety
-
-  fail_conditions:
-    - no_character_when_character_should_appear
-    - character_not_matching_bootstrap
-    - background_blank_when_scene_required
-    - all_panels_same_angle
-    - all_panels_same_distance
-    - no_page_hook
-```
-
----
-
-## 10. 角色基础图标准
-
-### cast_master_sheet.png
-
-作用：让用户一眼看到本章主要角色关系和视觉差异。
-
-```yaml
-cast_master_sheet:
-  must_show:
-    - 主角
-    - 关键配角
-    - 主要敌方
-    - 群像阵营色块
-    - 身高/体型对比
-    - 发型差异
-    - 脸型差异
-    - 服装主色块
-    - 标志性道具
-```
-
-### 单角色图
-
-每个 A/B/C 级角色至少一张：
-
-```yaml
-single_character_card:
-  must_show:
-    - 3/4角度半身或全身
-    - 正脸识别
-    - 发型
-    - 脸型
-    - 服装主轮廓
-    - 主色块
-    - 标志性道具
-    - 基础表情
-```
-
-首次不要做过重设定：
-
-```yaml
-first_bootstrap_do_not:
-  - 不做复杂三视图
-  - 不做完整表情包
-  - 不做武器拆解页
-  - 不做服装结构爆炸图
-```
-
----
-
-## 11. 角色优先级
-
-```yaml
-character_bootstrap_priority:
-  A_main:
-    required: true
-    target: 主角
-    must_define:
-      - silhouette
-      - face_shape
-      - eye_shape
-      - hair_shape
-      - outfit_shape
-      - color_block
-      - prop_or_mark
-      - speech_style
-
-  B_key_support:
-    required: if_present
-    max_count: 2
-    target: 器灵、同伴、幼态角色、重要辅助角色
-
-  C_named_pressure:
-    required: if_present
-    max_count: 3
-    target: 主要敌方、长老、对手、压迫者
-
-  D_crowd:
-    required: if_present
-    output: 阵营色块与群像规则，不单独生成复杂角色图
-```
-
-基础角色图优先级：
-
-```yaml
-character_anchor_priority:
-  1: 用户上传的基础角色图
-  2: 上一期 handoff.json 中的角色状态
-  3: 本期自动生成的 character_bootstrap
-  4: 小说文字推断
+  forbid:
+    - blank_background
+    - only_color_blocks
+    - only_text_description
+    - no_landmark
+    - no_prop_visual
 ```
 
 ---
@@ -486,7 +488,7 @@ workflow:
 
   step_2_version_and_source_gate:
     action:
-      - 检查是否为 V12.2
+      - 检查是否为 V12.4
       - 检查是否读到章节正文
       - 如果未读到正文，停止并要求用户粘贴正文
 
@@ -500,6 +502,7 @@ workflow:
     output:
       - character_bootstrap/
       - scene_bootstrap/
+    note: 生成后不得停顿，不得把资产表拼入漫画页，必须继续后续步骤
 
   step_5_chapter_analysis:
     output:
@@ -528,7 +531,7 @@ workflow:
       - 检查角色图锚点
       - 检查场景图锚点
       - 检查图像生成能力
-      - 若缺失，停止或补齐，不得生成占位页
+      - 若缺失，补齐后继续；若无法补齐，停止，不得生成占位页
 
   step_10_generate_comic_pages:
     output:
@@ -543,11 +546,17 @@ workflow:
       - comic_pages/P09.png
       - comic_pages/P10.png
 
-  step_11_qc_report:
+  step_11_optional_preview_sheet:
+    condition: all_P01_to_P10_exist
+    output:
+      - preview_sheet.jpg
+    note: 仅作为附加缩略图，不得替代漫画页
+
+  step_12_qc_report:
     output:
       - qc_report.json
 
-  step_12_output_handoff:
+  step_13_output_handoff:
     output:
       - handoff.json
 ```
@@ -631,62 +640,7 @@ must_have_per_page:
 
 ---
 
-## 16. 画风锁定
-
-```yaml
-STYLE_LOCK:
-  name: 中国漫画_日系线稿_赛璐璐平涂_导演分镜版
-
-  line:
-    - 清晰黑色漫画线稿
-    - 主轮廓略粗
-    - 内部线条较细
-    - 允许少量手绘粗糙感
-
-  color:
-    - 赛璐璐平涂
-    - 平涂色块
-    - 1-2层硬边阴影
-    - 少渐变
-    - 少法宝光
-    - 少材质纹理
-
-  character:
-    - 偏日系人物脸型
-    - 鼻口简化
-    - 眼睛有表现力
-    - 表情漫画化
-    - 中国玄幻/中国漫画服装轮廓
-
-  background:
-    - 背景简化但不能空白
-    - 只保留关键地标
-    - 不要CG电影感
-    - 不要游戏场景概念图
-
-  panel:
-    - 黑边分镜
-    - 竖向滚动
-    - 大中小切块变化
-    - 留白节奏
-    - 速度线和拟声字
-```
-
-统一风格提示词：
-
-```text
-中国漫画，偏日系人物线稿，清晰黑色漫画线，主轮廓略粗，内部线条较细，赛璐璐平涂，平涂色块，1-2层硬边阴影，少量局部法宝光，背景简化但不空白，分镜黑边清楚，竖向滚动漫画，人物表情漫画化，强镜头切换，留白节奏，像人类漫画工作室连载页。
-```
-
-负面提示：
-
-```text
-AI poster, cinematic CG, game concept art, glossy painting, painterly rendering, oil painting, realistic skin, 3D face, excessive glow, volumetric light, depth of field, hyper detailed background, same face syndrome, character sheet only, infographic, summary page, thumbnails, readable test page, stick figure, wireframe, placeholder layout, python drawing, svg diagram
-```
-
----
-
-## 17. handoff.json 必须记录
+## 16. handoff.json 必须记录
 
 ```yaml
 handoff_must_include:
@@ -723,7 +677,7 @@ handoff_bootstrap_source:
 
 ---
 
-## 18. 用户启动提示词
+## 17. 用户启动提示词
 
 ### 首次无角色图
 
@@ -733,8 +687,8 @@ handoff_bootstrap_source:
 2. To-Comic-StudioFlow.md
 
 这是首次冷启动，没有基础角色图，也没有 handoff.json。
-请先根据小说生成 character_bootstrap 角色基础包和 scene_bootstrap 场景基础包。
-然后直接输出本章完整结果包：
+请按 V12.4 工作：先生成 character_bootstrap 角色基础包和 scene_bootstrap 场景基础包，但不要把这些资产混进漫画页。
+然后继续生成完整结果包：
 - character_bootstrap/
 - scene_bootstrap/
 - chapter_card.json
@@ -742,11 +696,12 @@ handoff_bootstrap_source:
 - character_lock.json
 - scene_lock.json
 - page_script.json
-- comic_pages/P01.png 到 P10.png
+- comic_pages/P01.png 到 P10.png 十张独立漫画页
 - handoff.json
 - qc_report.json
+- preview_sheet.jpg（可选，不能替代 P01-P10）
 
-如果无法生成真实图片，不要用简笔图、线框图、SVG 或 Python 示意图替代。
+如果无法生成真实图片，不要用简笔图、线框图、SVG 或 Python 示意图替代，也不要把脚本包说成完成。
 ```
 
 ### 首次有角色图
@@ -758,7 +713,7 @@ handoff_bootstrap_source:
 3. 基础角色图
 
 这是第一期，没有上一期 handoff.json。
-请自动新建 handoff，并补全 scene_bootstrap，然后直接输出本章完整结果包。
+请自动新建 handoff，并补全 scene_bootstrap，然后继续输出本章完整结果包。
 ```
 
 ### 下一章继续
@@ -775,7 +730,7 @@ handoff_bootstrap_source:
 
 ---
 
-## 19. V12.2 防 BUG 审计清单
+## 18. V12.4 防 BUG 审计清单
 
 ```yaml
 audit_cases:
@@ -784,8 +739,10 @@ audit_cases:
       - read_chapter_text_or_stop
       - generate_character_bootstrap
       - generate_scene_bootstrap
-      - generate_P01_to_P10
+      - generate_P01_to_P10_individual_pages
       - generate_handoff
+      - do_not_stop_at_script_pack
+      - do_not_output_single_production_board
 
   case_2_url_unreadable:
     expected:
@@ -802,7 +759,7 @@ audit_cases:
   case_4_old_skiis_uploaded:
     expected:
       - warn_version_risk
-      - require_To_Comic_StudioFlow_V12_2
+      - require_To_Comic_StudioFlow_V12_4
 
   case_5_existing_handoff_no_character_image:
     expected:
@@ -823,11 +780,26 @@ audit_cases:
     expected:
       - fail
       - regenerate_as_comic_pages
+
+  case_9_partial_page_generation:
+    expected:
+      - fail_until_missing_pages_are_generated
+      - do_not_finish_with_only_P08_P09
+
+  case_10_style_drift_to_dark_concept_art:
+    expected:
+      - fail
+      - return_to_chinese_comic_serial_page_style
+
+  case_11_asset_board_mixed_with_comic_pages:
+    expected:
+      - fail
+      - separate_assets_from_comic_pages
 ```
 
 ---
 
-## 20. 验收标准
+## 19. 验收标准
 
 ```yaml
 acceptance:
@@ -847,7 +819,7 @@ acceptance:
     character_lock: required
     scene_lock: required
     page_script: required
-    comic_pages_P01_to_P10: required
+    comic_pages_P01_to_P10_individual_files: required
     handoff: required
     qc_report: required
 
@@ -861,12 +833,18 @@ acceptance:
     - no_downloadable_character_bootstrap_pack
     - no_downloadable_scene_bootstrap_pack
     - no_handoff_json
+    - final_output_is_script_pack_only
+    - final_output_is_partial_pages_only
+    - asset_board_mixed_with_comic_pages_as_single_image
+    - preview_sheet_replaces_individual_pages
+    - production_board_presented_as_final_comic
 
   manga_feel:
     line_art_visible: required
     cel_shading_visible: required
     no_cg_background: required
     no_ai_poster: required
+    chinese_comic_serial_page_feel: required
 
   character:
     main_character_consistent: required
@@ -882,4 +860,43 @@ acceptance:
     panel_shape_variety: required
     camera_angle_variety: required
     reaction_panel_present: required
+```
+
+---
+
+## 20. 验收测试方法
+
+```yaml
+acceptance_test_method:
+  static_audit:
+    purpose: 检查 To-Comic-StudioFlow.md 是否包含关键防 BUG 规则
+    pass_conditions:
+      - has_delivery_layer_separation
+      - has_final_file_gate
+      - has_preview_sheet_rule
+      - has_visual_style_regression_lock
+      - has_no_placeholder_policy
+
+  dry_run_audit:
+    purpose: 用典型输入场景推演是否会走正确流程
+    cases:
+      - 首次只上传小说链接和本文件
+      - 首次上传小说链接和基础角色图
+      - 下一章上传小说链接、角色包和 handoff
+      - 链接不可读
+      - 图像生成能力不可用
+      - 输出只有一张总览图
+
+  real_output_audit:
+    purpose: 对实际生成结果包验收
+    must_check:
+      - 是否存在 comic_pages/P01.png 到 P10.png
+      - 是否存在 character_bootstrap 与 scene_bootstrap
+      - 是否存在 handoff.json 与 qc_report.json
+      - P01-P10 是否为独立漫画页
+      - 是否没有资产板混入漫画页
+      - 是否保留中国漫画连载风味
+```
+
+仅做 `static_audit` 和 `dry_run_audit` 不能证明最终图片一定达标；必须对实际生成的输出包执行 `real_output_audit` 才能最终验收。
 ```
