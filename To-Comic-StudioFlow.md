@@ -1,18 +1,15 @@
-# To-Comic-StudioFlow V12.4.1
+# To-Comic-StudioFlow V12.4.2
 
 > 单文件版中国小说转漫画生产流程。  
-> V12.4.1 在 V12.4 基础上重点修复两个执行层 BUG：  
-> 1）模型不能一次完成时，不能停在中间还说完成；  
-> 2）模型不能输出生产看板/资产总览图并当作最终漫画结果。  
->
-> 最终主交付必须是 `comic_pages/P01.png` 到 `comic_pages/P10.png` 十张独立中国漫画页；`character_bootstrap/`、`scene_bootstrap/`、JSON、QC、preview_sheet 都只是辅助交付，不得混入漫画页，不得替代十张独立页面。
+> V12.4.2 = V12.4.1 完整生产防 BUG 规则 + 私人非商业流程测试模式。  
+> 核心目标：个人娱乐、非商业化、不公开发布、仅流程测试时，不让版权/改编权提示反复打断生产流程；同时继续保留不公开发布、不商业发行的风险记录。
 
 ---
 
 ## 0. 一句话目标
 
 ```text
-输入一章小说，最终输出十张独立中国漫画页 P01.png 到 P10.png，并附带角色基础包、场景基础包、脚本文件、handoff.json、qc_report.json 与 output_manifest.json。不得把所有内容合成一张大图，不得用预览图、看板图、脚本包或 render_manifest 替代漫画页。
+输入一章小说，最终输出十张独立中国漫画页 P01.png 到 P10.png，并附带角色基础包、场景基础包、脚本文件、handoff.json、qc_report.json 与 output_manifest.json；不得把所有内容合成一张大图，不得用预览图、看板图、脚本包或 render_manifest 替代漫画页。
 ```
 
 ---
@@ -22,7 +19,7 @@
 ```yaml
 version_guard:
   required_file_name: To-Comic-StudioFlow.md
-  required_version: V12.4.1
+  required_version: V12.4.2
   deprecated_names:
     - SKIIS_V12.md
     - SKIIS_V12(1).md
@@ -31,17 +28,175 @@ version_guard:
     - To-Comic-StudioFlow V12.2
     - To-Comic-StudioFlow V12.3
     - To-Comic-StudioFlow V12.4
+    - To-Comic-StudioFlow V12.4.1
   if_uploaded_old_file:
     action:
-      - warn_user: 请使用 To-Comic-StudioFlow.md V12.4.1
-      - continue_only_if_content_contains: To-Comic-StudioFlow V12.4.1
+      - warn_user: 请使用 To-Comic-StudioFlow.md V12.4.2
+      - continue_only_if_content_contains: To-Comic-StudioFlow V12.4.2
 ```
 
-旧版文件不得继续执行漫画生成。若文件不是 V12.4.1，必须提醒用户换文件。
+旧版文件不得继续执行漫画生成。若文件不是 V12.4.2，必须提醒用户换文件。
 
 ---
 
-## 2. 三种启动模式
+## 2. 私人非商业流程测试模式
+
+本流程支持用户声明为“个人娱乐、非商业化、不公开发布、仅流程测试”的使用场景。该模式用于避免系统在每次任务中反复打断询问版权/改编权问题，但不代表授予任何公开发布、商业发行或平台连载权利。
+
+```yaml
+private_noncommercial_mode:
+  purpose:
+    - 避免版权/改编权问题反复打断漫画生产流程
+    - 明确本次仅作为个人娱乐、非商业化、不公开发布、内部流程测试
+    - 将权利状态记录到 qc_report.json 与 output_manifest.json
+    - 不把权利提示作为每次生成的强制暂停点
+
+  trigger:
+    all_required:
+      - 用户明确声明个人娱乐
+      - 用户明确声明非商业化
+      - 用户明确声明不公开发布
+      - 用户明确声明仅流程测试或内部测试
+
+  accepted_user_phrases:
+    - 这是个人娱乐用途
+    - 非商业化
+    - 不公开发布
+    - 仅用于内部流程测试
+    - 只做个人研究和流程测试
+    - 不上传平台、不公开传播、不商业发行
+
+  action_when_triggered:
+    - 不再重复询问版权/改编权问题
+    - 继续执行 To-Comic-StudioFlow 主流程
+    - 不因版权确认问题中断 character_bootstrap、scene_bootstrap、comic_pages 生成
+    - 在 qc_report.json 中记录 rights_mode
+    - 在 output_manifest.json 中记录 publication_mode 与 commercial_mode
+
+  record_fields:
+    rights_mode: user_declared_private_noncommercial
+    publication_mode: private_only
+    commercial_mode: no
+    public_release: no
+    workflow_blocked_by_rights: false
+    user_declaration_required: already_declared
+```
+
+### 私人非商业模式下的处理规则
+
+```yaml
+rights_handling_under_private_mode:
+  do:
+    - 继续读取小说章节内容
+    - 继续生成 character_bootstrap/
+    - 继续生成 scene_bootstrap/
+    - 继续生成 comic_pages/P01.png 到 P10.png
+    - 继续生成 handoff.json
+    - 继续生成 qc_report.json
+    - 继续生成 output_manifest.json
+
+  do_not:
+    - 不要反复要求用户提供授权证明
+    - 不要因为用户未提供正式授权文件而停止流程测试
+    - 不要把版权提示作为最终结果前的阻断门槛
+    - 不要在每一轮继续生成时重复询问相同问题
+```
+
+### 公开发布 / 商业化例外
+
+如果用户要求公开发布、商业化发行、上传漫画平台、对外连载、商业售卖或宣传推广，则不得使用私人非商业流程测试模式自动放行。
+
+```yaml
+commercial_or_public_release_gate:
+  trigger:
+    - 用户要求公开发布
+    - 用户要求上传平台
+    - 用户要求商业化发行
+    - 用户要求对外连载
+    - 用户要求商业宣传使用
+    - 用户要求生成可直接发布的复刻式改编成品
+
+  action:
+    - 提醒用户需要确认改编授权
+    - 未确认授权前不得输出面向公开发布的复刻式商业成品
+    - 可以切换为原创化、同类型、非特定原作复刻的漫画流程测试
+```
+
+### qc_report.json 记录要求
+
+```json
+{
+  "rights_mode": "user_declared_private_noncommercial",
+  "publication_mode": "private_only",
+  "commercial_mode": "no",
+  "public_release": "no",
+  "workflow_blocked_by_rights": false,
+  "rights_note": "用户声明本次仅个人娱乐、非商业化、不公开发布，用于内部流程测试。系统不因版权确认问题反复中断流程。"
+}
+```
+
+### output_manifest.json 记录要求
+
+```json
+{
+  "usage_mode": {
+    "rights_mode": "user_declared_private_noncommercial",
+    "publication_mode": "private_only",
+    "commercial_mode": "no",
+    "public_release": "no",
+    "workflow_blocked_by_rights": false
+  }
+}
+```
+
+### 启动提示补丁
+
+```text
+这是个人娱乐用途，非商业化，不公开发布，仅用于内部流程测试。
+请按 To-Comic-StudioFlow V12.4.2 工作，不要反复询问版权/改编权问题。
+如需记录，请在 qc_report.json 和 output_manifest.json 中标记：
+rights_mode = user_declared_private_noncommercial
+publication_mode = private_only
+commercial_mode = no
+workflow_blocked_by_rights = false
+但不要因此中断漫画生产流程。
+```
+
+### 防打断规则
+
+```yaml
+no_repeated_rights_interruption:
+  if_private_noncommercial_mode_already_declared:
+    - 后续同一项目、同一章节、同一连续生产流程中，不再重复询问版权/改编权
+    - 继续执行缺失文件生成
+    - 不得把 rights_gate 作为 IN_PROGRESS 或 BLOCKED 的原因
+    - 不得因为未上传授权证明而停止 P01-P10 生成
+
+  allow_record_only:
+    - rights_status 可记录
+    - rights_note 可记录
+    - 不作为流程阻断
+```
+
+### 与分批继续协议的关系
+
+```yaml
+batch_continuation_rights_rule:
+  if_status_IN_PROGRESS:
+    - 用户回复“继续”时，不得重复询问版权/改编权
+    - 直接读取 production_state.json
+    - 从缺失文件继续生成
+    - 直到 output_manifest.final_status = PASS 才允许说完成
+
+  rights_gate_must_not_reset_progress:
+    - 不得因为 rights_gate 重做已完成文件
+    - 不得因为 rights_gate 清空 production_state.json
+    - 不得因为 rights_gate 重启 cold_start 流程
+```
+
+---
+
+## 3. 启动模式
 
 ### A. 首次冷启动：没有基础角色图，也没有 handoff
 
@@ -97,7 +252,7 @@ output_manifest.json
 
 ---
 
-## 3. 正文读取门槛
+## 4. 正文读取门槛
 
 ```yaml
 source_text_gate:
@@ -125,7 +280,7 @@ source_text_gate:
 
 ---
 
-## 4. 交付层级隔离：最重要规则
+## 5. 交付层级隔离
 
 ```yaml
 delivery_layer_separation:
@@ -136,12 +291,6 @@ delivery_layer_separation:
 
   character_bootstrap:
     output_type: 独立资产文件夹
-    allowed_files:
-      - cast_master_sheet.png
-      - char_A_main_01.png
-      - char_B_support_01.png
-      - char_C_enemy_01.png
-      - character_bootstrap.json
     forbid:
       - 混入 comic_pages
       - 画进 P01-P10
@@ -150,11 +299,6 @@ delivery_layer_separation:
 
   scene_bootstrap:
     output_type: 独立资产文件夹
-    allowed_files:
-      - scene_master_sheet.png
-      - scene_key_location_01.png
-      - prop_key_item_01.png
-      - scene_bootstrap.json
     forbid:
       - 混入 comic_pages
       - 画进 P01-P10
@@ -163,15 +307,6 @@ delivery_layer_separation:
 
   metadata:
     output_type: 独立文本文件
-    allowed_files:
-      - chapter_card.json
-      - director_beat_sheet.json
-      - character_lock.json
-      - scene_lock.json
-      - page_script.json
-      - handoff.json
-      - qc_report.json
-      - output_manifest.json
     forbid:
       - 画进 comic_pages
       - 画进 preview_sheet
@@ -217,7 +352,7 @@ delivery_layer_separation:
 
 ---
 
-## 5. 冷启动资产硬门槛
+## 6. 冷启动资产硬门槛
 
 ```yaml
 cold_start_trigger:
@@ -258,7 +393,7 @@ bootstrap_file_gate:
 
 ---
 
-## 6. 漫画页优先级
+## 7. 漫画页优先级
 
 ```yaml
 comic_page_first_rule:
@@ -292,7 +427,7 @@ comic_page_first_rule:
 
 ---
 
-## 7. 单页独立规则
+## 8. 单页独立规则
 
 ```yaml
 single_page_file_rule:
@@ -318,7 +453,7 @@ single_page_file_rule:
 
 ---
 
-## 8. 中文后期排版规则
+## 9. 中文后期排版规则
 
 ```yaml
 lettering_layer_rule:
@@ -341,7 +476,7 @@ lettering_layer_rule:
 
 ---
 
-## 9. 最终文件验证门槛
+## 10. 最终文件验证门槛
 
 ```yaml
 final_file_gate:
@@ -375,7 +510,7 @@ final_file_gate:
 
 ---
 
-## 10. output_manifest.json 必须输出
+## 11. output_manifest.json 必须输出
 
 ```yaml
 output_manifest:
@@ -399,6 +534,11 @@ output_manifest:
       handoff_json: exists
       qc_report_json: exists
       lettering_data_json: exists_if_used
+    usage_mode:
+      rights_mode: user_declared_private_noncommercial_if_declared
+      publication_mode: private_only_if_declared
+      commercial_mode: no_if_declared
+      workflow_blocked_by_rights: false_if_private_noncommercial_declared
     final_status: PASS_or_IN_PROGRESS_or_BLOCKED_or_FAIL
 ```
 
@@ -406,9 +546,9 @@ output_manifest:
 
 ---
 
-## 11. 分批继续协议：不能一次完成时怎么做
+## 12. 分批继续协议：不能一次完成时怎么做
 
-V12.4.1 允许因为工具限制分批生成，但不允许把中间状态说成完成。
+V12.4.2 允许因为工具限制分批生成，但不允许把中间状态说成完成。
 
 ```yaml
 batch_continuation_protocol:
@@ -438,21 +578,15 @@ batch_continuation_protocol:
     text: 继续按 production_state.json 从缺失文件开始生成，不要重做已完成文件；直到 comic_pages/P01.png 到 P10.png、handoff.json、qc_report.json、output_manifest.json 全部存在，才允许说完成。
 ```
 
-如果被迫停止，必须明确告诉用户下一步操作，例如：
+如果被迫停止，必须明确告诉用户下一步操作：
 
 ```text
 当前不是最终结果，状态为 IN_PROGRESS。下一步请回复“继续”，系统必须从 production_state.json 记录的缺失文件继续生成，不得重做已完成文件。
 ```
 
-如果因为缺少图像生成能力被阻断，必须明确告诉用户：
-
-```text
-当前环境无法生成真实漫画图。下一步请切换到支持真实图像生成的环境，或上传基础角色图/场景图后继续。不得用简笔图、SVG、Python示意图替代。
-```
-
 ---
 
-## 12. 图像能力门槛
+## 13. 图像能力门槛
 
 ```yaml
 image_generation_capability_gate:
@@ -486,9 +620,9 @@ image_generation_capability_gate:
 
 ---
 
-## 13. 旧 V12 漫画风味继承锁
+## 14. 旧 V12 漫画风味继承锁
 
-V12.4.1 的目标不是改成暗黑资产图，而是在旧 V12 中国漫画连载风味基础上补齐冷启动资产。
+V12.4.2 的目标不是改成暗黑资产图，而是在旧 V12 中国漫画连载风味基础上补齐冷启动资产。
 
 ```yaml
 visual_style_regression_lock:
@@ -530,7 +664,7 @@ AI poster, cinematic CG, game concept art, glossy painting, painterly rendering,
 
 ---
 
-## 14. 角色基础图标准
+## 15. 角色与场景基础图标准
 
 ```yaml
 character_bootstrap_standard:
@@ -563,23 +697,7 @@ character_bootstrap_standard:
     - 不做完整表情包
     - 不做武器拆解页
     - 不做服装结构爆炸图
-```
 
-角色优先级：
-
-```yaml
-character_anchor_priority:
-  1: 用户上传的基础角色图
-  2: 上一期 handoff.json 中的角色状态
-  3: 本期自动生成的 character_bootstrap
-  4: 小说文字推断
-```
-
----
-
-## 15. 场景基础图标准
-
-```yaml
 scene_bootstrap_standard:
   scene_master_sheet:
     must_show:
@@ -601,13 +719,6 @@ scene_bootstrap_standard:
       - 本章关键道具外观
       - 道具发光/状态变化
       - 道具归属
-
-  forbid:
-    - blank_background
-    - only_color_blocks
-    - only_text_description
-    - no_landmark
-    - no_prop_visual
 ```
 
 ---
@@ -623,9 +734,10 @@ workflow:
       - 读取上一期 handoff.json，如果有
       - 读取本 To-Comic-StudioFlow.md
 
-  step_2_version_and_source_gate:
+  step_2_mode_rights_and_source_gate:
     action:
-      - 检查是否为 V12.4.1
+      - 检查是否为 V12.4.2
+      - 检查是否触发 private_noncommercial_mode
       - 检查是否读到章节正文
       - 如果未读到正文，停止并要求用户粘贴正文
 
@@ -657,11 +769,6 @@ workflow:
   step_8_page_script:
     output:
       - page_script.json
-    action:
-      - 生成 P01-P10 页面脚本
-      - 每页 3-6 个分镜
-      - 每页一个剧情变化点
-      - 每页有 hook_line
 
   step_9_pre_page_gate:
     action:
@@ -718,7 +825,7 @@ workflow:
 
 ---
 
-## 17. P01-P10 结构
+## 17. 页面结构与分镜规则
 
 ```yaml
 page_structure:
@@ -732,19 +839,17 @@ page_structure:
   P08: 旧怨/新冲突升级
   P09: 主角反问或反制，夺回节奏
   P10: 本章标题落点 + 下一期钩子
-```
 
-每页必须有：
-
-```yaml
-page_required:
-  - page_goal
-  - reader_question
-  - page_answer
-  - new_question
-  - key_visual
-  - hook_line
-  - panels
+page_panel_rule:
+  panels_per_page: 3-6
+  max_focus_faces: 3
+  max_dialogue_bubbles: 5
+  one_page_one_change: true
+  must_have_per_page:
+    - 1个主视觉大格
+    - 1个特写格
+    - 1个反应格或静默格
+    - 至少1个非普通横格
 ```
 
 ---
@@ -758,8 +863,9 @@ page_required:
 1. 小说当前章节原文或小说地址
 2. To-Comic-StudioFlow.md
 
+这是个人娱乐用途，非商业化，不公开发布，仅用于内部流程测试。
 这是首次冷启动，没有基础角色图，也没有 handoff.json。
-请按 V12.4.1 工作：先生成 character_bootstrap 角色基础包和 scene_bootstrap 场景基础包，但不要把这些资产混进漫画页。
+请按 V12.4.2 工作：先生成 character_bootstrap 角色基础包和 scene_bootstrap 场景基础包，但不要把这些资产混进漫画页。
 然后继续生成完整结果包：
 - character_bootstrap/
 - scene_bootstrap/
@@ -782,61 +888,7 @@ page_required:
 
 ---
 
-## 19. V12.4.1 防 BUG 审计清单
-
-```yaml
-audit_cases:
-  case_1_only_url_and_flow_file:
-    expected:
-      - read_chapter_text_or_stop
-      - generate_character_bootstrap
-      - generate_scene_bootstrap
-      - generate_P01_to_P10_individual_pages
-      - generate_handoff
-      - generate_output_manifest
-      - do_not_stop_at_script_pack
-      - do_not_output_single_production_board
-
-  case_2_url_unreadable:
-    expected:
-      - stop
-      - ask_user_to_paste_chapter_text
-      - provide_next_step_instruction
-      - do_not_generate_pages
-
-  case_3_no_image_generation_capability:
-    expected:
-      - stop
-      - explain_next_step
-      - do_not_create_stick_figure_pages
-      - do_not_create_svg_or_python_pages
-
-  case_4_output_single_summary_image:
-    expected:
-      - fail
-      - require_P01_png_to_P10_png_separate_files
-
-  case_5_partial_page_generation:
-    expected:
-      - status_IN_PROGRESS
-      - list_missing_pages
-      - provide_next_batch_instruction
-      - do_not_say_complete
-
-  case_6_asset_board_mixed_with_comic_pages:
-    expected:
-      - fail
-      - separate_assets_from_comic_pages
-
-  case_7_chinese_text_garbled:
-    expected:
-      - use_lettering_data
-      - regenerate_or_postprocess_text_layer
-```
-
----
-
-## 20. 验收标准
+## 19. 验收标准
 
 ```yaml
 acceptance:
@@ -879,63 +931,16 @@ acceptance:
     - production_board_presented_as_final_comic
     - final_status_is_not_PASS_but_answer_says_complete
 
+  private_noncommercial:
+    if_declared:
+      rights_mode_recorded: required
+      workflow_blocked_by_rights: false
+      no_repeated_rights_interruption: required
+
   manga_feel:
     line_art_visible: required
     cel_shading_visible: required
     no_cg_background: required
     no_ai_poster: required
     chinese_comic_serial_page_feel: required
-
-  character:
-    main_character_consistent: required
-    support_characters_distinct: required
-    child_character_stable: required
-    old_men_not_same_face: required
-    group_characters_not_overdrawn: required
-
-  director:
-    one_page_one_question: required
-    one_page_one_answer: required
-    page_end_hook: required
-    panel_shape_variety: required
-    camera_angle_variety: required
-    reaction_panel_present: required
-```
-
----
-
-## 21. 验收测试方法
-
-```yaml
-acceptance_test_method:
-  static_audit:
-    pass_conditions:
-      - has_delivery_layer_separation
-      - has_final_file_gate
-      - has_preview_sheet_rule
-      - has_visual_style_regression_lock
-      - has_no_placeholder_policy
-      - has_batch_continuation_protocol
-      - has_output_manifest
-      - has_lettering_layer_rule
-
-  dry_run_audit:
-    cases:
-      - 首次只上传小说链接和本文件
-      - 首次上传小说链接和基础角色图
-      - 下一章上传小说链接、角色包和 handoff
-      - 链接不可读
-      - 图像生成能力不可用
-      - 输出只有一张总览图
-      - 只能生成部分页面
-
-  real_output_audit:
-    must_check:
-      - 是否存在 comic_pages/P01.png 到 P10.png
-      - 是否存在 character_bootstrap 与 scene_bootstrap
-      - 是否存在 handoff.json、qc_report.json、output_manifest.json
-      - P01-P10 是否为独立漫画页
-      - 是否没有资产板混入漫画页
-      - 是否保留中国漫画连载风味
-      - 如果 final_status 不是 PASS，是否没有说完成
 ```
