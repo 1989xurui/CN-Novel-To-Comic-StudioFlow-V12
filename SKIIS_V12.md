@@ -1,33 +1,92 @@
 # SKIIS V12：CN Novel To Comic StudioFlow
 
-## 0. 当前版本原则
-
-本版取消默认的 **P01 测试页**、**P08 旧敌测试页** 等中间确认节点。
-
-只要用户一次性提供以下 4 类输入，就直接输出完整漫画生产结果包：
-
-```text
-1. 小说当前章节原文
-2. SKIIS_V12.md
-3. 基础角色图
-4. 上一期 handoff.json
-```
-
-如果没有上一期 `handoff.json`，则新建一个空白 handoff 作为第一期起点。
+> 单文件版。用户只需要上传 `SKIIS_V12.md` + 小说章节原文/链接 + 基础角色图 + 上一期 `handoff.json`，即可直接生成本章漫画成品 P01-P10 与新的 `handoff.json`。  
+> 本文件已经合并原本 `docs/OPERATION_GUIDE.md` 与 `docs/NEXT_STEPS.md` 的核心内容，不再依赖额外说明文档。
 
 ---
 
-## 1. 基础配置
+## 0. 一句话目标
+
+```text
+输入一章小说，直接输出中国漫画成品页 P01-P10，并生成 handoff.json，下一章继续用同一个 SKIIS + 基础角色图 + 上一期 handoff + 新章节原文/链接接着生产。
+```
+
+---
+
+## 1. 必须输入
+
+```yaml
+required_inputs:
+  - 小说当前章节原文或小说章节链接
+  - SKIIS_V12.md
+  - 基础角色图
+  - 上一期 handoff.json
+```
+
+如果是第一期，没有上一期 `handoff.json`：
+
+```yaml
+first_issue_rule:
+  - 自动新建空白 handoff
+  - 以基础角色图作为最高优先级角色锚点
+```
+
+如果是下一章：
+
+```yaml
+next_issue_rule:
+  - 必须读取上一期 handoff.json
+  - 继承角色外观、道具状态、场景状态和未解决钩子
+  - 不得随意改变上一期已经锁定的人物、服装、法宝和关系
+```
+
+---
+
+## 2. 默认输出
+
+默认不要停在 P01 测试页，也不要停在 P08 测试页。除非用户明确说“先测试”，否则直接输出完整结果包。
+
+```yaml
+default_outputs:
+  - chapter_card.json
+  - director_beat_sheet.json
+  - character_lock.json
+  - scene_lock.json
+  - page_script.json
+  - comic_pages/
+      - P01.png
+      - P02.png
+      - P03.png
+      - P04.png
+      - P05.png
+      - P06.png
+      - P07.png
+      - P08.png
+      - P09.png
+      - P10.png
+  - handoff.json
+```
+
+最终用户必须能直接看到漫画：
+
+```yaml
+comic_result_required:
+  - P01-P10 必须是漫画成品页或可阅读测试页
+  - 不允许只输出 JSON 而没有漫画页
+  - 不允许只输出分镜说明而没有图
+  - handoff.json 必须和漫画页一起输出
+```
+
+---
+
+## 3. 基础配置
 
 ```yaml
 SKIIS_NAME: CN_Novel_To_Comic_StudioFlow_V12
-MODE: 中国小说转漫画 / 中国漫画 / 日系人物线稿 / 人类漫画工作流
+MODE: 中国小说转漫画 / 中国漫画 / 人类漫画工作流
 UNIT: 1个小说章节 = 1期漫画
-PAGE_COUNT:
-  simple_chapter: 6
-  normal_chapter: 8
-  dense_chapter: 10
-  max: 10
+DEFAULT_PAGE_COUNT: 10
+PAGE_RANGE: P01-P10
 PAGE_TYPE: 中国移动端竖向漫画页面段
 CANVAS:
   master_width: 1600px
@@ -46,73 +105,16 @@ STYLE:
 
 ---
 
-## 2. 目标
+## 4. 生产目标
 
 ```yaml
 goal:
   - 把一章小说稳定改编成中国漫画
-  - 保持人物、场景、道具和风格连续
-  - 输出可以继续下一章生产的 handoff.json
-  - 尽量减少 AI 味、同脸、CG感和角色漂移
-  - 让漫画像人类团队生产，而不是AI海报拼图
-```
-
----
-
-## 3. 核心输入
-
-```yaml
-required_inputs:
-  - current_chapter_text: 小说当前章节原文
-  - skiis_file: SKIIS_V12.md
-  - base_character_images: 基础角色图
-  - previous_handoff: 上一期 handoff.json
-```
-
-输入解释：
-
-```yaml
-current_chapter_text:
-  purpose: 当前章剧情来源
-
-SKIIS_V12.md:
-  purpose: 工作流、画风、脚本、分镜、验收规则
-
-base_character_images:
-  purpose: 锁定主角和关键配角外观，优先级高于文字描述
-
-previous_handoff.json:
-  purpose: 继承上一期角色、道具、场景、未解决钩子和禁改项
-```
-
----
-
-## 4. 默认输出
-
-默认直接输出完整结果包，不停在测试页。
-
-```yaml
-default_outputs:
-  - chapter_card.json
-  - director_beat_sheet.json
-  - character_lock.json
-  - scene_lock.json
-  - page_script.json
-  - comic_pages/
-      - P01.png
-      - P02.png
-      - ...
-  - handoff.json
-```
-
-可选内部资产：
-
-```yaml
-optional_internal_assets:
-  - panel_images/
-  - lettering_data.json
-  - qc_report.json
-  - prompt_pack.json
+  - 直接生成 P01-P10 漫画页
+  - 保持人物、场景、道具和画风连续
+  - 生成下一章可继续使用的 handoff.json
+  - 降低 AI 味、同脸、CG感和角色漂移
+  - 让结果像人类漫画团队生产，而不是AI海报拼图
 ```
 
 ---
@@ -121,9 +123,10 @@ optional_internal_assets:
 
 ```yaml
 forbid:
-  - 不要默认先输出P01测试页
-  - 不要默认先输出P08测试页
+  - 不要默认停在 P01 测试页
+  - 不要默认停在 P08 测试页
   - 不要要求用户逐页确认后才继续
+  - 不要只输出制作文件，不输出漫画页
   - 不要生成章节总览图
   - 不要一张图塞完整章
   - 不要角色设定栏画进漫画
@@ -134,20 +137,18 @@ forbid:
   - 不要让AI直接生成大量中文小字
 ```
 
-如果用户明确要求“先测试一页”，才进入单页测试模式；否则默认完整输出。
-
 ---
 
-## 6. 生产流程
+## 6. 自动工作流
 
 ```yaml
 workflow:
   step_1_read_inputs:
     action:
-      - 读取小说当前章节原文
+      - 读取小说当前章节原文或链接内容
       - 读取基础角色图
       - 读取上一期 handoff.json
-      - 读取 SKIIS_V12.md
+      - 读取本 SKIIS_V12.md
 
   step_2_chapter_analysis:
     output:
@@ -156,6 +157,7 @@ workflow:
       - 提取本章主事件
       - 提取角色意图
       - 提取关键场景、道具、冲突和结尾钩子
+      - 删除重复解释和低视觉价值旁白
 
   step_3_director_beat:
     output:
@@ -172,26 +174,28 @@ workflow:
       - scene_lock.json
     action:
       - 用基础角色图锁定主角和关键角色
-      - 用 handoff 继承上一章状态
+      - 用 handoff 继承上一期状态
       - 锁定本章场景地标、道具状态
 
   step_5_page_script:
     output:
       - page_script.json
     action:
-      - 生成6-10页漫画脚本
-      - 每页3-6个分镜
+      - 生成 P01-P10 页面脚本
+      - 每页 3-6 个分镜
       - 每页一个剧情变化点
+      - 每页有 hook_line
 
-  step_6_generate_pages:
+  step_6_generate_comic_pages:
     output:
-      - comic_pages/P01.png ... Pxx.png
+      - comic_pages/P01.png ... comic_pages/P10.png
     action:
-      - 按单格无字图逻辑生成画面
-      - 合成页面
-      - 添加中文气泡和拟声字
+      - 按页面脚本生成漫画页
+      - 每页体现大中小分镜变化
+      - 保持角色连续、场景连续、风格连续
+      - 文字可后期排版，但读者必须能理解剧情
 
-  step_7_handoff:
+  step_7_output_handoff:
     output:
       - handoff.json
     action:
@@ -243,46 +247,40 @@ chapter_analysis:
 
 ---
 
-## 8. 页数判断
+## 8. P01-P10 结构
+
+默认一章输出 10 页。如果章节非常短，可以压缩为 6-8 页；但默认仍以 P01-P10 输出最稳定。
 
 ```yaml
-page_count_selector:
-  simple_chapter:
-    pages: 6
-    condition: 单事件、少角色、无大战
+page_structure:
+  P01: 地点建立 + 主角发现异常
+  P02: 关键物/关键规则识别
+  P03: 主角行动，触发核心变化
+  P04: 外部压力逼近
+  P05: 敌方大场面登场
+  P06: 正面对峙，敌方提出压力
+  P07: 主角亮身份或亮底牌，暂时稳局
+  P08: 旧怨/新冲突升级
+  P09: 主角反问或反制，夺回节奏
+  P10: 本章标题落点 + 下一期钩子
+```
 
-  normal_chapter:
-    pages: 8
-    condition: 有发现、行动、转折、钩子
+每页必须有：
 
-  dense_chapter:
-    pages: 10
-    condition: 有关键道具、多方势力、身份反转、高潮宣言
-
-  hard_limit:
-    max_pages: 10
-    reason: 减少角色漂移，提高完成度
+```yaml
+page_required:
+  - page_goal
+  - reader_question
+  - page_answer
+  - new_question
+  - key_visual
+  - hook_line
+  - panels
 ```
 
 ---
 
-## 9. 导演页纲格式
-
-```yaml
-director_beat:
-  page_no:
-  reader_question: 这一页开头，读者想知道什么？
-  page_answer: 这一页回答什么？
-  new_question: 这一页结尾留下什么？
-  emotional_target: 好奇/紧张/压迫/爽点/反转/悬念
-  key_visual: 本页最大视觉记忆点
-  camera_strategy: 远景/近景/特写/斜切/留白/反应格
-  page_turn_hook: 让读者继续下滑的钩子
-```
-
----
-
-## 10. 页面脚本格式
+## 9. 页面脚本格式
 
 ```yaml
 page_script:
@@ -310,7 +308,7 @@ page_script:
 
 ---
 
-## 11. 每页分镜规则
+## 10. 每页分镜规则
 
 ```yaml
 page_panel_rule:
@@ -333,9 +331,38 @@ panel_forbid:
   - 没有结尾钩子
 ```
 
+分镜切块库：
+
+```yaml
+panel_cut_library:
+  A_wide_establishing:
+    use: 建立大场景
+    shape: 横向大格
+  B_tall_pressure:
+    use: 高处压迫/敌方登场
+    shape: 窄长竖格
+  C_closeup_slice:
+    use: 眼神/手/法宝
+    shape: 横向窄条
+  D_diagonal_action:
+    use: 冲击/飞行/斩击
+    shape: 斜切格
+  E_silent_gap:
+    use: 悬念/停顿/压抑
+    shape: 大留白或无字小格
+  F_reaction_stack:
+    use: 群像反应
+    shape: 2-3个小格叠放
+  G_bleed_impact:
+    use: 高潮爆点
+    shape: 无边框溢出版
+```
+
 ---
 
-## 12. 角色锁定规则
+## 11. 角色锁定规则
+
+基础角色图优先级最高。文字设定只能补充，不能覆盖基础角色图。
 
 ```yaml
 character_shape_language:
@@ -354,7 +381,11 @@ character_shape_language:
   speech_style:
   appearance_limit:
   forbidden:
+```
 
+角色分级：
+
+```yaml
 character_tier:
   A_main:
     rule: 主角，必须最稳定，基础角色图优先
@@ -369,9 +400,29 @@ character_tier:
     rule: 群像不精画脸，靠阵型、服色、武器、旗帜识别
 ```
 
+幼态/儿童角色：
+
+```yaml
+child_character_rule:
+  max_appearance_per_issue: 2
+  no_random_background_appearance: true
+  no_crowd_mixing: true
+  must_keep:
+    - 小体型
+    - 圆脸大眼
+    - 固定发型
+    - 固定服装色
+    - 固定道具
+  forbid:
+    - 成人化
+    - 长发少女化
+    - 黑衣化
+    - 随机出现在群像中
+```
+
 ---
 
-## 13. 场景锁定规则
+## 12. 场景锁定规则
 
 ```yaml
 scene_anchor:
@@ -399,7 +450,7 @@ scene_style:
 
 ---
 
-## 14. 画风锁定
+## 13. 画风锁定
 
 ```yaml
 STYLE_LOCK:
@@ -442,7 +493,7 @@ STYLE_LOCK:
 
 ---
 
-## 15. 统一风格提示词
+## 14. 统一风格提示词
 
 ```text
 中国漫画，偏日系人物线稿，清晰黑色漫画线，主轮廓略粗，内部线条较细，赛璐璐平涂，平涂色块，1-2层硬边阴影，少量局部法宝光，背景简化，分镜黑边清楚，竖向滚动漫画，人物表情漫画化，强镜头切换，留白节奏，像人类漫画工作室连载页。
@@ -462,7 +513,7 @@ AI poster, cinematic CG, game concept art, glossy painting, painterly rendering,
 
 ---
 
-## 16. 输出结果包结构
+## 15. 输出结果包结构
 
 ```text
 output/
@@ -474,13 +525,20 @@ output/
   comic_pages/
     P01.png
     P02.png
-    ...
+    P03.png
+    P04.png
+    P05.png
+    P06.png
+    P07.png
+    P08.png
+    P09.png
+    P10.png
   handoff.json
 ```
 
 ---
 
-## 17. handoff.json 必须记录
+## 16. handoff.json 必须记录
 
 ```yaml
 handoff_must_include:
@@ -493,9 +551,20 @@ handoff_must_include:
   - 下次不能改变的内容
 ```
 
+下一章启动时，用户只需要上传：
+
+```text
+1. 下一章小说地址或原文
+2. SKIIS_V12.md
+3. 基础角色图
+4. 上一期 handoff.json
+```
+
+系统必须直接继续生成下一章 P01-P10 与新的 handoff.json。
+
 ---
 
-## 18. 验收标准
+## 17. 验收标准
 
 ```yaml
 acceptance:
@@ -532,36 +601,28 @@ acceptance:
 
 ---
 
-## 19. 新项目启动提示词
+## 18. 用户启动提示词
+
+用户只需要这样说：
 
 ```text
 请读取我上传的：
-1. 小说当前章节原文
+1. 小说当前章节原文或小说地址
 2. SKIIS_V12.md
 3. 基础角色图
 4. 上一期 handoff.json
 
-按 SKIIS V12 工作。
+按 SKIIS V12 工作，直接输出本章完整结果包：
+- chapter_card.json
+- director_beat_sheet.json
+- character_lock.json
+- scene_lock.json
+- page_script.json
+- comic_pages/P01-P10.png
+- handoff.json
 
+如果没有上一期 handoff，就新建空白 handoff。
 不要先停在 P01 测试页。
-不要先停在 P08 测试页。
 不要让我逐页确认。
-除非我明确要求测试，否则直接输出完整结果包。
-
-请直接输出：
-1. chapter_card.json
-2. director_beat_sheet.json
-3. character_lock.json
-4. scene_lock.json
-5. page_script.json
-6. comic_pages/P01-Pxx.png
-7. handoff.json
-
-要求：
-- 保持人物、场景、道具连续
-- 不要CG电影感
-- 不要AI厚涂
-- 不要一页塞完整章
-- 不要生成章节总览图
-- 中文排版尽量后期添加
+直接生成可以看到的漫画页。
 ```
